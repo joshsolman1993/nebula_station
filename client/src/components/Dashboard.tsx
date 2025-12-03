@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import GridSystem from './GridSystem';
 import BuildingMenu from './BuildingMenu';
+import EnergyStatus from './EnergyStatus';
 import { BUILDINGS } from '../config/gameData';
 import gameService from '../services/gameService';
 
@@ -13,6 +14,12 @@ interface StationBuilding {
     builtAt?: Date;
 }
 
+interface ProductionRates {
+    metal: number;
+    crystal: number;
+    energy: number;
+}
+
 const Dashboard = () => {
     const { user, logout } = useAuth();
     const [stationLayout, setStationLayout] = useState<StationBuilding[]>([]);
@@ -20,12 +27,50 @@ const Dashboard = () => {
     const [selectedCell, setSelectedCell] = useState<{ x: number; y: number } | null>(null);
     const [isBuilding, setIsBuilding] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [localUser, setLocalUser] = useState(user);
+
+    // Production data from server
+    const [serverProduction, setServerProduction] = useState<ProductionRates>({ metal: 0, crystal: 0, energy: 0 });
+    const [serverConsumption, setServerConsumption] = useState({ energy: 0 });
+    const [netEnergy, setNetEnergy] = useState(0);
+    const [efficiency, setEfficiency] = useState(100);
+
+    // Client-side estimated resources (for live counter effect)
+    const [displayResources, setDisplayResources] = useState({
+        metal: user?.resources.metal || 0,
+        crystal: user?.resources.crystal || 0,
+        energy: user?.resources.energy || 0,
+    });
+    const [displayCredits, setDisplayCredits] = useState(user?.credits || 0);
+
+    const lastUpdateRef = useRef<number>(Date.now());
 
     // Load station data on mount
     useEffect(() => {
         loadStation();
     }, []);
+
+    // Client-side resource ticker (runs every second)
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const now = Date.now();
+            const elapsedSeconds = (now - lastUpdateRef.current) / 1000;
+
+            // Calculate resources gained per second
+            const metalPerSec = serverProduction.metal / 3600;
+            const crystalPerSec = serverProduction.crystal / 3600;
+            const energyPerSec = serverProduction.energy / 3600;
+
+            setDisplayResources(prev => ({
+                metal: Math.floor(prev.metal + metalPerSec * elapsedSeconds),
+                crystal: Math.floor(prev.crystal + crystalPerSec * elapsedSeconds),
+                energy: Math.floor(prev.energy + energyPerSec * elapsedSeconds),
+            }));
+
+            lastUpdateRef.current = now;
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [serverProduction]);
 
     const loadStation = async () => {
         try {
@@ -33,6 +78,17 @@ const Dashboard = () => {
             if (response.success) {
                 setStationLayout(response.station.layout);
                 setStationSize(response.station.size);
+
+                // Update production rates
+                setServerProduction(response.production);
+                setServerConsumption(response.consumption);
+                setNetEnergy(response.netEnergy);
+                setEfficiency(response.efficiency);
+
+                // Sync display resources with server data
+                setDisplayResources(response.user.resources);
+                setDisplayCredits(response.user.credits);
+                lastUpdateRef.current = Date.now();
             }
         } catch (err: any) {
             console.error('Failed to load station:', err);
@@ -41,7 +97,6 @@ const Dashboard = () => {
     };
 
     const handleCellClick = (x: number, y: number) => {
-        // Check if cell is occupied
         const isOccupied = stationLayout.some((building) => building.x === x && building.y === y);
 
         if (isOccupied) {
@@ -55,7 +110,7 @@ const Dashboard = () => {
     };
 
     const handleBuild = async (buildingId: string) => {
-        if (!selectedCell || !localUser) return;
+        if (!selectedCell) return;
 
         setIsBuilding(true);
         setError(null);
@@ -67,8 +122,16 @@ const Dashboard = () => {
                 // Update station layout
                 setStationLayout(response.station.layout);
 
-                // Update local user resources
-                setLocalUser(response.user);
+                // Update production rates
+                setServerProduction(response.production);
+                setServerConsumption(response.consumption);
+                setNetEnergy(response.netEnergy);
+                setEfficiency(response.efficiency);
+
+                // Sync display resources with server data
+                setDisplayResources(response.user.resources);
+                setDisplayCredits(response.user.credits);
+                lastUpdateRef.current = Date.now();
 
                 // Clear selection
                 setSelectedCell(null);
@@ -83,7 +146,7 @@ const Dashboard = () => {
         }
     };
 
-    if (!localUser) return null;
+    if (!user) return null;
 
     return (
         <div className="min-h-screen bg-space-gradient">
@@ -95,7 +158,7 @@ const Dashboard = () => {
                             NEBULA STATION
                         </h1>
                         <p className="font-rajdhani text-sm text-gray-400">
-                            Command Center - {localUser.username}
+                            Command Center - {user.username}
                         </p>
                     </div>
                     <button
@@ -109,7 +172,7 @@ const Dashboard = () => {
 
             {/* Main Content */}
             <main className="max-w-7xl mx-auto px-4 py-8">
-                {/* Resources Bar */}
+                {/* Resources Bar with Production Rates */}
                 <div className="mb-6 bg-deepspace-950/40 backdrop-blur-md border border-neon-cyan/20 rounded-xl p-4">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="flex items-center gap-3">
@@ -117,8 +180,13 @@ const Dashboard = () => {
                             <div>
                                 <div className="font-rajdhani text-xs text-gray-400">Metal</div>
                                 <div className="font-orbitron text-lg font-bold text-neon-cyan">
-                                    {localUser.resources.metal.toLocaleString()}
+                                    {displayResources.metal.toLocaleString()}
                                 </div>
+                                {serverProduction.metal > 0 && (
+                                    <div className={`font-rajdhani text-xs ${efficiency < 100 ? 'text-red-400' : 'text-green-400'}`}>
+                                        +{serverProduction.metal.toFixed(1)}/h
+                                    </div>
+                                )}
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
@@ -126,8 +194,13 @@ const Dashboard = () => {
                             <div>
                                 <div className="font-rajdhani text-xs text-gray-400">Crystal</div>
                                 <div className="font-orbitron text-lg font-bold text-neon-magenta">
-                                    {localUser.resources.crystal.toLocaleString()}
+                                    {displayResources.crystal.toLocaleString()}
                                 </div>
+                                {serverProduction.crystal > 0 && (
+                                    <div className={`font-rajdhani text-xs ${efficiency < 100 ? 'text-red-400' : 'text-green-400'}`}>
+                                        +{serverProduction.crystal.toFixed(1)}/h
+                                    </div>
+                                )}
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
@@ -135,8 +208,13 @@ const Dashboard = () => {
                             <div>
                                 <div className="font-rajdhani text-xs text-gray-400">Energy</div>
                                 <div className="font-orbitron text-lg font-bold text-neon-amber">
-                                    {localUser.resources.energy.toLocaleString()}
+                                    {displayResources.energy.toLocaleString()}
                                 </div>
+                                {serverProduction.energy > 0 && (
+                                    <div className="font-rajdhani text-xs text-green-400">
+                                        +{serverProduction.energy.toFixed(1)}/h
+                                    </div>
+                                )}
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
@@ -144,7 +222,7 @@ const Dashboard = () => {
                             <div>
                                 <div className="font-rajdhani text-xs text-gray-400">Credits</div>
                                 <div className="font-orbitron text-lg font-bold text-green-400">
-                                    {localUser.credits.toLocaleString()}
+                                    {displayCredits.toLocaleString()}
                                 </div>
                             </div>
                         </div>
@@ -157,6 +235,16 @@ const Dashboard = () => {
                         <p className="font-rajdhani text-red-400 font-semibold">⚠️ {error}</p>
                     </div>
                 )}
+
+                {/* Energy Status */}
+                <div className="mb-6">
+                    <EnergyStatus
+                        production={serverProduction.energy}
+                        consumption={serverConsumption.energy}
+                        netEnergy={netEnergy}
+                        efficiency={efficiency}
+                    />
+                </div>
 
                 {/* Grid and Building Menu */}
                 <div className="grid lg:grid-cols-3 gap-6">
@@ -174,8 +262,8 @@ const Dashboard = () => {
                     <div>
                         <BuildingMenu
                             buildings={BUILDINGS}
-                            userResources={localUser.resources}
-                            userCredits={localUser.credits}
+                            userResources={displayResources}
+                            userCredits={displayCredits}
                             onBuild={handleBuild}
                             selectedCell={selectedCell}
                             isBuilding={isBuilding}

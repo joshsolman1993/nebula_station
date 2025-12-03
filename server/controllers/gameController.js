@@ -1,20 +1,33 @@
 const User = require('../models/User');
 const Station = require('../models/Station');
 const { getBuildingById } = require('../config/gameData');
+const { calculateProduction, getProductionRates } = require('../utils/productionEngine');
 
 // @desc    Get user's station
 // @route   GET /api/game/station
 // @access  Private
 exports.getStation = async (req, res) => {
     try {
+        const user = await User.findById(req.userId);
         const station = await Station.findOne({ userId: req.userId });
 
-        if (!station) {
+        if (!user || !station) {
             return res.status(404).json({
                 success: false,
-                error: 'Station not found',
+                error: 'User or station not found',
             });
         }
+
+        // Calculate production and update resources
+        const productionStats = calculateProduction(user, station);
+
+        // Save updated user if resources were updated
+        if (productionStats.updated) {
+            await user.save();
+        }
+
+        // Get current production rates
+        const rates = getProductionRates(station);
 
         res.json({
             success: true,
@@ -24,6 +37,18 @@ exports.getStation = async (req, res) => {
                 createdAt: station.createdAt,
                 updatedAt: station.updatedAt,
             },
+            user: {
+                id: user._id,
+                username: user.username,
+                resources: user.resources,
+                credits: user.credits,
+                xp: user.xp,
+                level: user.level,
+            },
+            production: rates.production,
+            consumption: rates.consumption,
+            netEnergy: rates.netEnergy,
+            efficiency: rates.efficiency,
         });
     } catch (error) {
         console.error('❌ Get station error:', error);
@@ -67,6 +92,12 @@ exports.buildBuilding = async (req, res) => {
                 success: false,
                 error: 'User or station not found',
             });
+        }
+
+        // Calculate production and update resources BEFORE building
+        const productionStats = calculateProduction(user, station);
+        if (productionStats.updated) {
+            await user.save();
         }
 
         // Check if position is valid
@@ -127,6 +158,9 @@ exports.buildBuilding = async (req, res) => {
 
         console.log(`✅ Building placed: ${buildingData.name} at (${x}, ${y}) by ${user.username}`);
 
+        // Get updated production rates
+        const rates = getProductionRates(station);
+
         res.json({
             success: true,
             message: `${buildingData.name} built successfully!`,
@@ -142,6 +176,10 @@ exports.buildBuilding = async (req, res) => {
                 layout: station.layout,
                 size: station.size,
             },
+            production: rates.production,
+            consumption: rates.consumption,
+            netEnergy: rates.netEnergy,
+            efficiency: rates.efficiency,
         });
     } catch (error) {
         console.error('❌ Build building error:', error);
