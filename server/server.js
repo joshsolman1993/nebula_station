@@ -69,6 +69,10 @@ app.get('/api/test', (req, res) => {
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
 
+// Game routes
+const gameRoutes = require('./routes/gameRoutes');
+app.use('/api/game', gameRoutes);
+
 // 404 handler
 app.use((req, res) => {
     res.status(404).json({

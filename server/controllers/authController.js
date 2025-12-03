@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Station = require('../models/Station');
 const jwt = require('jsonwebtoken');
 
 // Generate JWT Token
@@ -57,10 +58,18 @@ exports.register = async (req, res) => {
             password,
         });
 
+        // Create station for the new user
+        await Station.create({
+            userId: user._id,
+            layout: [], // Empty layout initially
+            size: 8, // Default 8x8 grid
+        });
+
         // Generate token
         const token = generateToken(user._id);
 
         console.log(`✅ New user registered: ${username} (${email})`);
+        console.log(`✅ Station created for user: ${username}`);
 
         res.status(201).json({
             success: true,
