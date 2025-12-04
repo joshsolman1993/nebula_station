@@ -1,4 +1,4 @@
-const { getBuildingById } = require('../config/gameData');
+const { getBuildingById, TECHNOLOGIES } = require('../config/gameData');
 
 /**
  * Calculate and apply resource production based on elapsed time
@@ -44,14 +44,28 @@ const calculateProduction = (user, station) => {
         // Add production (per hour -> per second)
         totalProduction.metal += buildingData.production.metal / 3600;
         totalProduction.crystal += buildingData.production.crystal / 3600;
-        totalProduction.energy += buildingData.production.energy / 3600;
 
-        // Add energy consumption (buildings that produce metal/crystal consume energy)
-        if (buildingData.production.metal > 0 || buildingData.production.crystal > 0) {
-            // Each production building consumes 5 energy/h
+        // Handle negative energy production (consumption defined in building data)
+        if (buildingData.production.energy < 0) {
+            totalConsumption.energy += Math.abs(buildingData.production.energy) / 3600;
+        } else {
+            totalProduction.energy += buildingData.production.energy / 3600;
+        }
+
+        // Add base energy consumption for production buildings if not already handled
+        // (This logic might be redundant if buildings have negative energy production defined)
+        // Keeping it for backward compatibility or specific game rules
+        if ((buildingData.production.metal > 0 || buildingData.production.crystal > 0) && buildingData.production.energy >= 0) {
+            // Each production building consumes 5 energy/h by default if not specified otherwise
             totalConsumption.energy += 5 / 3600;
         }
     });
+
+    // Apply Research Bonuses
+    if (user.completedResearch && user.completedResearch.includes(TECHNOLOGIES.ENERGY_GRID_OPTIMIZATION.id)) {
+        const bonus = TECHNOLOGIES.ENERGY_GRID_OPTIMIZATION.effect.value;
+        totalProduction.energy *= (1 + bonus);
+    }
 
     // Calculate net energy balance
     const netEnergy = totalProduction.energy - totalConsumption.energy;
@@ -112,7 +126,7 @@ const calculateProduction = (user, station) => {
  * Get current production rates without updating resources
  * Used for display purposes
  */
-const getProductionRates = (station) => {
+const getProductionRates = (station, user) => {
     let totalProduction = {
         metal: 0,
         crystal: 0,
@@ -129,12 +143,23 @@ const getProductionRates = (station) => {
 
         totalProduction.metal += buildingData.production.metal;
         totalProduction.crystal += buildingData.production.crystal;
-        totalProduction.energy += buildingData.production.energy;
 
-        if (buildingData.production.metal > 0 || buildingData.production.crystal > 0) {
+        if (buildingData.production.energy < 0) {
+            totalConsumption.energy += Math.abs(buildingData.production.energy);
+        } else {
+            totalProduction.energy += buildingData.production.energy;
+        }
+
+        if ((buildingData.production.metal > 0 || buildingData.production.crystal > 0) && buildingData.production.energy >= 0) {
             totalConsumption.energy += 5; // 5 energy/h per production building
         }
     });
+
+    // Apply Research Bonuses
+    if (user && user.completedResearch && user.completedResearch.includes(TECHNOLOGIES.ENERGY_GRID_OPTIMIZATION.id)) {
+        const bonus = TECHNOLOGIES.ENERGY_GRID_OPTIMIZATION.effect.value;
+        totalProduction.energy *= (1 + bonus);
+    }
 
     const netEnergy = totalProduction.energy - totalConsumption.energy;
     const efficiency = netEnergy < 0 ? 50 : 100;

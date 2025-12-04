@@ -16,4 +16,9 @@ router.get('/station', gameController.getStation);
 // @access  Private
 router.post('/build', gameController.buildBuilding);
 
+// @route   POST /api/game/research
+// @desc    Research a technology
+// @access  Private
+router.post('/research', gameController.researchTechnology);
+
 module.exports = router;

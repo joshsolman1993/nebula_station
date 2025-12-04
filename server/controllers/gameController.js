@@ -1,6 +1,6 @@
 const User = require('../models/User');
 const Station = require('../models/Station');
-const { getBuildingById } = require('../config/gameData');
+const { getBuildingById, getTechnologyById } = require('../config/gameData');
 const { calculateProduction, getProductionRates } = require('../utils/productionEngine');
 
 // @desc    Get user's station
@@ -27,7 +27,7 @@ exports.getStation = async (req, res) => {
         }
 
         // Get current production rates
-        const rates = getProductionRates(station);
+        const rates = getProductionRates(station, user);
 
         res.json({
             success: true,
@@ -44,6 +44,7 @@ exports.getStation = async (req, res) => {
                 credits: user.credits,
                 xp: user.xp,
                 level: user.level,
+                completedResearch: user.completedResearch,
             },
             production: rates.production,
             consumption: rates.consumption,
@@ -92,6 +93,16 @@ exports.buildBuilding = async (req, res) => {
                 success: false,
                 error: 'User or station not found',
             });
+        }
+
+        // Check technology requirement
+        if (buildingData.requiredTech) {
+            if (!user.completedResearch.includes(buildingData.requiredTech)) {
+                return res.status(400).json({
+                    success: false,
+                    error: `Technology required: ${buildingData.requiredTech}`,
+                });
+            }
         }
 
         // Calculate production and update resources BEFORE building
@@ -159,7 +170,7 @@ exports.buildBuilding = async (req, res) => {
         console.log(`✅ Building placed: ${buildingData.name} at (${x}, ${y}) by ${user.username}`);
 
         // Get updated production rates
-        const rates = getProductionRates(station);
+        const rates = getProductionRates(station, user);
 
         res.json({
             success: true,
@@ -171,6 +182,7 @@ exports.buildBuilding = async (req, res) => {
                 credits: user.credits,
                 xp: user.xp,
                 level: user.level,
+                completedResearch: user.completedResearch,
             },
             station: {
                 layout: station.layout,
@@ -186,6 +198,117 @@ exports.buildBuilding = async (req, res) => {
         res.status(500).json({
             success: false,
             error: error.message || 'Failed to build building',
+        });
+    }
+};
+
+// @desc    Research a technology
+// @route   POST /api/game/research
+// @access  Private
+exports.researchTechnology = async (req, res) => {
+    try {
+        const { techId } = req.body;
+
+        if (!techId) {
+            return res.status(400).json({
+                success: false,
+                error: 'Please provide a technology ID',
+            });
+        }
+
+        const techData = getTechnologyById(techId);
+        if (!techData) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid technology ID',
+            });
+        }
+
+        const user = await User.findById(req.userId);
+        const station = await Station.findOne({ userId: req.userId });
+
+        if (!user || !station) {
+            return res.status(404).json({
+                success: false,
+                error: 'User or station not found',
+            });
+        }
+
+        // Check if already researched
+        if (user.completedResearch.includes(techId)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Technology already researched',
+            });
+        }
+
+        // Check if Research Lab exists
+        const hasResearchLab = station.layout.some(building => building.buildingId === 'research_lab');
+        if (!hasResearchLab) {
+            return res.status(400).json({
+                success: false,
+                error: 'Research Lab required to conduct research',
+            });
+        }
+
+        // Check resources
+        const cost = techData.cost;
+        if (user.resources.metal < cost.metal) {
+            return res.status(400).json({
+                success: false,
+                error: `Insufficient Metal. Required: ${cost.metal}`,
+            });
+        }
+        if (user.resources.crystal < cost.crystal) {
+            return res.status(400).json({
+                success: false,
+                error: `Insufficient Crystal. Required: ${cost.crystal}`,
+            });
+        }
+        if (user.resources.energy < cost.energy) {
+            return res.status(400).json({
+                success: false,
+                error: `Insufficient Energy. Required: ${cost.energy}`,
+            });
+        }
+
+        // Deduct resources
+        user.resources.metal -= cost.metal;
+        user.resources.crystal -= cost.crystal;
+        user.resources.energy -= cost.energy;
+
+        // Add technology
+        user.completedResearch.push(techId);
+
+        await user.save();
+
+        console.log(`✅ Research completed: ${techData.name} by ${user.username}`);
+
+        // Get updated production rates
+        const rates = getProductionRates(station, user);
+
+        res.json({
+            success: true,
+            message: `${techData.name} researched successfully!`,
+            user: {
+                id: user._id,
+                username: user.username,
+                resources: user.resources,
+                credits: user.credits,
+                xp: user.xp,
+                level: user.level,
+                completedResearch: user.completedResearch,
+            },
+            production: rates.production,
+            consumption: rates.consumption,
+            netEnergy: rates.netEnergy,
+            efficiency: rates.efficiency,
+        });
+    } catch (error) {
+        console.error('❌ Research error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message || 'Failed to research technology',
         });
     }
 };

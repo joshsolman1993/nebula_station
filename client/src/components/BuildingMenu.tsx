@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Lock } from 'lucide-react';
 
 interface Building {
     id: string;
@@ -19,6 +20,7 @@ interface Building {
     };
     icon: string;
     color: string;
+    requiredTech?: string;
 }
 
 interface BuildingMenuProps {
@@ -32,6 +34,7 @@ interface BuildingMenuProps {
     onBuild: (buildingId: string) => void;
     selectedCell: { x: number; y: number } | null;
     isBuilding: boolean;
+    completedResearch: string[];
 }
 
 const BuildingMenu = ({
@@ -41,6 +44,7 @@ const BuildingMenu = ({
     onBuild,
     selectedCell,
     isBuilding,
+    completedResearch,
 }: BuildingMenuProps) => {
     const [selectedBuilding, setSelectedBuilding] = useState<string | null>(null);
 
@@ -53,11 +57,17 @@ const BuildingMenu = ({
         );
     };
 
+    const isUnlocked = (building: Building) => {
+        if (!building.requiredTech) return true;
+        return completedResearch.includes(building.requiredTech);
+    };
+
     const formatProduction = (production: Building['production']) => {
         const items = [];
         if (production.metal > 0) items.push(`+${production.metal} Metal/h`);
         if (production.crystal > 0) items.push(`+${production.crystal} Crystal/h`);
         if (production.energy > 0) items.push(`+${production.energy} Energy/h`);
+        if (production.energy < 0) items.push(`${production.energy} Energy/h`);
         if (production.credits > 0) items.push(`+${production.credits} Credits/h`);
         return items.join(', ');
     };
@@ -88,32 +98,42 @@ const BuildingMenu = ({
             <div className="space-y-3 mb-6">
                 {buildings.map((building) => {
                     const affordable = canAfford(building);
+                    const unlocked = isUnlocked(building);
                     const selected = selectedBuilding === building.id;
 
                     return (
                         <button
                             key={building.id}
-                            onClick={() => setSelectedBuilding(building.id)}
+                            onClick={() => unlocked && setSelectedBuilding(building.id)}
+                            disabled={!unlocked}
                             className={`
-                w-full text-left p-4 rounded-lg border-2 transition-all duration-200
+                w-full text-left p-4 rounded-lg border-2 transition-all duration-200 relative
                 ${selected
                                     ? 'border-neon-amber bg-neon-amber/10'
-                                    : affordable
-                                        ? 'border-neon-cyan/30 bg-deepspace-900/30 hover:border-neon-cyan/60'
-                                        : 'border-gray-700/30 bg-deepspace-900/20 opacity-60'
+                                    : !unlocked
+                                        ? 'border-gray-700/30 bg-gray-900/50 opacity-75 cursor-not-allowed'
+                                        : affordable
+                                            ? 'border-neon-cyan/30 bg-deepspace-900/30 hover:border-neon-cyan/60'
+                                            : 'border-gray-700/30 bg-deepspace-900/20 opacity-60'
                                 }
               `}
                         >
+                            {!unlocked && (
+                                <div className="absolute top-2 right-2 text-gray-500">
+                                    <Lock className="w-5 h-5" />
+                                </div>
+                            )}
+
                             <div className="flex items-start justify-between mb-2">
                                 <div className="flex items-center gap-3">
                                     <span
                                         className="font-orbitron text-lg font-bold"
-                                        style={{ color: building.color }}
+                                        style={{ color: unlocked ? building.color : '#666' }}
                                     >
                                         {building.icon}
                                     </span>
                                     <div>
-                                        <h4 className="font-orbitron font-bold text-white">
+                                        <h4 className={`font-orbitron font-bold ${unlocked ? 'text-white' : 'text-gray-500'}`}>
                                             {building.name}
                                         </h4>
                                         <p className="text-xs text-gray-400 font-rajdhani">
@@ -123,19 +143,29 @@ const BuildingMenu = ({
                                 </div>
                             </div>
 
-                            <div className="flex items-center justify-between text-xs font-rajdhani">
-                                <div>
-                                    <span className="text-gray-500">Cost: </span>
-                                    <span className={affordable ? 'text-neon-cyan' : 'text-red-400'}>
-                                        {formatCost(building.cost)}
-                                    </span>
-                                </div>
-                            </div>
+                            {unlocked ? (
+                                <>
+                                    <div className="flex items-center justify-between text-xs font-rajdhani">
+                                        <div>
+                                            <span className="text-gray-500">Cost: </span>
+                                            <span className={affordable ? 'text-neon-cyan' : 'text-red-400'}>
+                                                {formatCost(building.cost)}
+                                            </span>
+                                        </div>
+                                    </div>
 
-                            <div className="mt-2 text-xs font-rajdhani">
-                                <span className="text-gray-500">Produces: </span>
-                                <span className="text-green-400">{formatProduction(building.production)}</span>
-                            </div>
+                                    <div className="mt-2 text-xs font-rajdhani">
+                                        <span className="text-gray-500">Produces: </span>
+                                        <span className="text-green-400">
+                                            {formatProduction(building.production)}
+                                        </span>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="mt-2 text-xs font-rajdhani text-red-400 font-bold">
+                                    Requires: {building.requiredTech?.replace(/_/g, ' ').toUpperCase()}
+                                </div>
+                            )}
                         </button>
                     );
                 })}
@@ -194,13 +224,15 @@ const BuildingMenu = ({
             </div>
 
             {/* Insufficient Resources Warning */}
-            {selectedBuilding && selectedCell && !canAfford(buildings.find((b) => b.id === selectedBuilding)!) && (
-                <div className="mt-4 p-3 bg-red-500/10 border border-red-500/50 rounded-lg">
-                    <p className="text-sm text-red-400 font-rajdhani font-semibold">
-                        ⚠️ Insufficient Resources
-                    </p>
-                </div>
-            )}
+            {selectedBuilding &&
+                selectedCell &&
+                !canAfford(buildings.find((b) => b.id === selectedBuilding)!) && (
+                    <div className="mt-4 p-3 bg-red-500/10 border border-red-500/50 rounded-lg">
+                        <p className="text-sm text-red-400 font-rajdhani font-semibold">
+                            ⚠️ Insufficient Resources
+                        </p>
+                    </div>
+                )}
         </div>
     );
 };

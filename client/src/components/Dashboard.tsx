@@ -3,8 +3,10 @@ import { useAuth } from '../contexts/AuthContext';
 import GridSystem from './GridSystem';
 import BuildingMenu from './BuildingMenu';
 import EnergyStatus from './EnergyStatus';
-import { BUILDINGS } from '../config/gameData';
+import { BUILDINGS, getBuildingById } from '../config/gameData';
 import gameService from '../services/gameService';
+import { Hammer, Gem, Zap, Coins } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface StationBuilding {
     x: number;
@@ -21,12 +23,12 @@ interface ProductionRates {
 }
 
 const Dashboard = () => {
-    const { user, logout } = useAuth();
+    const { user } = useAuth();
     const [stationLayout, setStationLayout] = useState<StationBuilding[]>([]);
     const [stationSize, setStationSize] = useState(8);
     const [selectedCell, setSelectedCell] = useState<{ x: number; y: number } | null>(null);
     const [isBuilding, setIsBuilding] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [completedResearch, setCompletedResearch] = useState<string[]>([]);
 
     // Production data from server
     const [serverProduction, setServerProduction] = useState<ProductionRates>({ metal: 0, crystal: 0, energy: 0 });
@@ -60,7 +62,7 @@ const Dashboard = () => {
             const crystalPerSec = serverProduction.crystal / 3600;
             const energyPerSec = serverProduction.energy / 3600;
 
-            setDisplayResources(prev => ({
+            setDisplayResources((prev) => ({
                 metal: Math.floor(prev.metal + metalPerSec * elapsedSeconds),
                 crystal: Math.floor(prev.crystal + crystalPerSec * elapsedSeconds),
                 energy: Math.floor(prev.energy + energyPerSec * elapsedSeconds),
@@ -88,11 +90,12 @@ const Dashboard = () => {
                 // Sync display resources with server data
                 setDisplayResources(response.user.resources);
                 setDisplayCredits(response.user.credits);
+                setCompletedResearch(response.user.completedResearch || []);
                 lastUpdateRef.current = Date.now();
             }
         } catch (err: any) {
             console.error('Failed to load station:', err);
-            setError('Failed to load station data');
+            toast.error('Failed to load station data');
         }
     };
 
@@ -100,20 +103,17 @@ const Dashboard = () => {
         const isOccupied = stationLayout.some((building) => building.x === x && building.y === y);
 
         if (isOccupied) {
-            setError('This position is already occupied');
-            setTimeout(() => setError(null), 3000);
+            toast.error('This position is already occupied');
             return;
         }
 
         setSelectedCell({ x, y });
-        setError(null);
     };
 
     const handleBuild = async (buildingId: string) => {
         if (!selectedCell) return;
 
         setIsBuilding(true);
-        setError(null);
 
         try {
             const response = await gameService.buildBuilding(buildingId, selectedCell.x, selectedCell.y);
@@ -131,16 +131,20 @@ const Dashboard = () => {
                 // Sync display resources with server data
                 setDisplayResources(response.user.resources);
                 setDisplayCredits(response.user.credits);
+                setCompletedResearch(response.user.completedResearch || []);
                 lastUpdateRef.current = Date.now();
 
                 // Clear selection
                 setSelectedCell(null);
 
-                console.log('✅ Building placed successfully!');
+                const buildingData = getBuildingById(buildingId);
+                toast.success(`Construction started: ${buildingData?.name}`, {
+                    icon: '🏗️',
+                });
             }
         } catch (err: any) {
             console.error('Build error:', err);
-            setError(err.message || 'Failed to build. Please try again.');
+            toast.error(err.message || 'Failed to build. Please try again.');
         } finally {
             setIsBuilding(false);
         }
@@ -149,62 +153,56 @@ const Dashboard = () => {
     if (!user) return null;
 
     return (
-        <div className="min-h-screen bg-space-gradient">
-            {/* Header */}
-            <header className="border-b border-neon-cyan/20 bg-deepspace-950/50 backdrop-blur-md">
-                <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-                    <div>
-                        <h1 className="font-orbitron text-2xl font-bold text-neon-cyan">
-                            NEBULA STATION
-                        </h1>
-                        <p className="font-rajdhani text-sm text-gray-400">
-                            Command Center - {user.username}
-                        </p>
-                    </div>
-                    <button
-                        onClick={logout}
-                        className="px-4 py-2 bg-red-500/20 border border-red-500/50 rounded-lg font-rajdhani font-semibold text-red-400 hover:bg-red-500/30 transition-all duration-200"
-                    >
-                        Logout
-                    </button>
-                </div>
-            </header>
-
+        <div className="py-8">
             {/* Main Content */}
-            <main className="max-w-7xl mx-auto px-4 py-8">
-                {/* Resources Bar with Production Rates */}
-                <div className="mb-6 bg-deepspace-950/40 backdrop-blur-md border border-neon-cyan/20 rounded-xl p-4">
+            <main className="max-w-7xl mx-auto px-4">
+                {/* Page Title */}
+                <div className="text-center mb-8">
+                    <h1 className="font-orbitron text-4xl font-bold bg-gradient-to-r from-neon-cyan to-neon-magenta bg-clip-text text-transparent mb-2">
+                        🏠 COMMAND CENTER
+                    </h1>
+                    <p className="font-rajdhani text-gray-400">Build and manage your station</p>
+                </div>
+
+                {/* Resources Bar with Production Rates - Sticky */}
+                <div className="sticky top-20 z-40 mb-6 bg-deepspace-950/80 backdrop-blur-xl border border-neon-cyan/20 rounded-xl p-4 shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="flex items-center gap-3">
-                            <span className="text-2xl">🔩</span>
+                            <Hammer className="w-6 h-6 text-neon-cyan" />
                             <div>
                                 <div className="font-rajdhani text-xs text-gray-400">Metal</div>
                                 <div className="font-orbitron text-lg font-bold text-neon-cyan">
                                     {displayResources.metal.toLocaleString()}
                                 </div>
                                 {serverProduction.metal > 0 && (
-                                    <div className={`font-rajdhani text-xs ${efficiency < 100 ? 'text-red-400' : 'text-green-400'}`}>
+                                    <div
+                                        className={`font-rajdhani text-xs ${efficiency < 100 ? 'text-red-400' : 'text-green-400'
+                                            }`}
+                                    >
                                         +{serverProduction.metal.toFixed(1)}/h
                                     </div>
                                 )}
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
-                            <span className="text-2xl">💎</span>
+                            <Gem className="w-6 h-6 text-neon-magenta" />
                             <div>
                                 <div className="font-rajdhani text-xs text-gray-400">Crystal</div>
                                 <div className="font-orbitron text-lg font-bold text-neon-magenta">
                                     {displayResources.crystal.toLocaleString()}
                                 </div>
                                 {serverProduction.crystal > 0 && (
-                                    <div className={`font-rajdhani text-xs ${efficiency < 100 ? 'text-red-400' : 'text-green-400'}`}>
+                                    <div
+                                        className={`font-rajdhani text-xs ${efficiency < 100 ? 'text-red-400' : 'text-green-400'
+                                            }`}
+                                    >
                                         +{serverProduction.crystal.toFixed(1)}/h
                                     </div>
                                 )}
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
-                            <span className="text-2xl">⚡</span>
+                            <Zap className="w-6 h-6 text-neon-amber" />
                             <div>
                                 <div className="font-rajdhani text-xs text-gray-400">Energy</div>
                                 <div className="font-orbitron text-lg font-bold text-neon-amber">
@@ -218,7 +216,7 @@ const Dashboard = () => {
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
-                            <span className="text-2xl">💰</span>
+                            <Coins className="w-6 h-6 text-green-400" />
                             <div>
                                 <div className="font-rajdhani text-xs text-gray-400">Credits</div>
                                 <div className="font-orbitron text-lg font-bold text-green-400">
@@ -228,13 +226,6 @@ const Dashboard = () => {
                         </div>
                     </div>
                 </div>
-
-                {/* Error Message */}
-                {error && (
-                    <div className="mb-6 p-4 bg-red-500/10 border border-red-500/50 rounded-lg">
-                        <p className="font-rajdhani text-red-400 font-semibold">⚠️ {error}</p>
-                    </div>
-                )}
 
                 {/* Energy Status */}
                 <div className="mb-6">
@@ -267,19 +258,20 @@ const Dashboard = () => {
                             onBuild={handleBuild}
                             selectedCell={selectedCell}
                             isBuilding={isBuilding}
+                            completedResearch={completedResearch}
                         />
                     </div>
                 </div>
 
                 {/* Info Section */}
                 <div className="mt-6 bg-deepspace-950/40 backdrop-blur-md border border-neon-cyan/20 rounded-xl p-6">
-                    <h3 className="font-orbitron text-xl font-bold text-neon-cyan mb-3">
-                        📊 Station Info
-                    </h3>
+                    <h3 className="font-orbitron text-xl font-bold text-neon-cyan mb-3">📊 Station Info</h3>
                     <div className="grid md:grid-cols-3 gap-4 font-rajdhani text-sm">
                         <div>
                             <span className="text-gray-400">Grid Size:</span>
-                            <span className="ml-2 text-white font-semibold">{stationSize}x{stationSize}</span>
+                            <span className="ml-2 text-white font-semibold">
+                                {stationSize}x{stationSize}
+                            </span>
                         </div>
                         <div>
                             <span className="text-gray-400">Buildings:</span>
@@ -294,12 +286,6 @@ const Dashboard = () => {
                     </div>
                 </div>
             </main>
-
-            {/* Decorative corners */}
-            <div className="fixed top-0 left-0 w-32 h-32 border-l-2 border-t-2 border-neon-cyan/10 pointer-events-none"></div>
-            <div className="fixed top-0 right-0 w-32 h-32 border-r-2 border-t-2 border-neon-magenta/10 pointer-events-none"></div>
-            <div className="fixed bottom-0 left-0 w-32 h-32 border-l-2 border-b-2 border-neon-amber/10 pointer-events-none"></div>
-            <div className="fixed bottom-0 right-0 w-32 h-32 border-r-2 border-b-2 border-neon-cyan/10 pointer-events-none"></div>
         </div>
     );
 };

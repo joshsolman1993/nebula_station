@@ -42,14 +42,16 @@ export interface Building {
     upgradeCompletesAt?: Date;
 }
 
-export const enum BuildingType {
-    COMMAND_CENTER = 'command_center',
-    RESOURCE_EXTRACTOR = 'resource_extractor',
-    ENERGY_PLANT = 'energy_plant',
-    RESEARCH_LAB = 'research_lab',
-    SHIPYARD = 'shipyard',
-    DEFENSE_GRID = 'defense_grid',
-}
+export const BuildingType = {
+    COMMAND_CENTER: 'command_center',
+    RESOURCE_EXTRACTOR: 'resource_extractor',
+    ENERGY_PLANT: 'energy_plant',
+    RESEARCH_LAB: 'research_lab',
+    SHIPYARD: 'shipyard',
+    DEFENSE_GRID: 'defense_grid',
+} as const;
+
+export type BuildingType = typeof BuildingType[keyof typeof BuildingType];
 
 export interface Defense {
     id: string;
@@ -58,12 +60,14 @@ export interface Defense {
     quantity: number;
 }
 
-export const enum DefenseType {
-    LASER_TURRET = 'laser_turret',
-    MISSILE_BATTERY = 'missile_battery',
-    SHIELD_GENERATOR = 'shield_generator',
-    PLASMA_CANNON = 'plasma_cannon',
-}
+export const DefenseType = {
+    LASER_TURRET: 'laser_turret',
+    MISSILE_BATTERY: 'missile_battery',
+    SHIELD_GENERATOR: 'shield_generator',
+    PLASMA_CANNON: 'plasma_cannon',
+} as const;
+
+export type DefenseType = typeof DefenseType[keyof typeof DefenseType];
 
 export interface Ship {
     id: string;
@@ -75,13 +79,15 @@ export interface Ship {
     cargo: number;
 }
 
-export const enum ShipType {
-    SCOUT = 'scout',
-    FIGHTER = 'fighter',
-    CRUISER = 'cruiser',
-    BATTLESHIP = 'battleship',
-    CARGO = 'cargo',
-}
+export const ShipType = {
+    SCOUT: 'scout',
+    FIGHTER: 'fighter',
+    CRUISER: 'cruiser',
+    BATTLESHIP: 'battleship',
+    CARGO: 'cargo',
+} as const;
+
+export type ShipType = typeof ShipType[keyof typeof ShipType];
 
 export interface ApiResponse<T = any> {
     success: boolean;

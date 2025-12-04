@@ -52,6 +52,40 @@ const userSchema = new mongoose.Schema({
         type: Number,
         default: 0,
     },
+    // Fleet Management
+    ships: {
+        scout_drone: {
+            type: Number,
+            default: 0,
+        },
+        mining_barge: {
+            type: Number,
+            default: 0,
+        },
+        explorer_ship: {
+            type: Number,
+            default: 0,
+        },
+    },
+    // Research
+    completedResearch: [{
+        type: String,
+    }],
+    activeMission: {
+        type: {
+            missionId: String,
+            shipId: String,
+            shipCount: Number,
+            startTime: Date,
+            endTime: Date,
+            potentialReward: {
+                metal: Number,
+                crystal: Number,
+                energy: Number,
+            },
+        },
+        default: null,
+    },
     // Timestamps
     lastLogin: {
         type: Date,

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import apiService from '../services/api';
+import toast from 'react-hot-toast';
 
 interface User {
     id: string;
@@ -15,6 +16,7 @@ interface User {
     level: number;
     credits: number;
     lastLogin?: Date;
+    completedResearch?: string[];
 }
 
 interface AuthContextType {
@@ -22,10 +24,10 @@ interface AuthContextType {
     token: string | null;
     isAuthenticated: boolean;
     isLoading: boolean;
+    error: string | null;
     login: (email: string, password: string) => Promise<void>;
     register: (username: string, email: string, password: string) => Promise<void>;
     logout: () => void;
-    error: string | null;
     clearError: () => void;
 }
 
@@ -47,7 +49,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const [token, setToken] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+
     const [error, setError] = useState<string | null>(null);
+
+    const clearError = () => setError(null);
 
     // Load user from localStorage on mount
     useEffect(() => {
@@ -63,8 +68,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const login = async (email: string, password: string) => {
         try {
-            setError(null);
             setIsLoading(true);
+            setError(null);
 
             const response = await apiService.post('/auth/login', { email, password });
 
@@ -80,13 +85,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 localStorage.setItem('user', JSON.stringify(userData));
 
                 console.log('✅ Login successful:', userData.username);
+                toast.success(`Welcome back, ${userData.username}!`);
             } else {
                 throw new Error(response.error || 'Login failed');
             }
         } catch (err: any) {
             const errorMessage = err.message || 'Login failed. Please try again.';
-            setError(errorMessage);
             console.error('❌ Login error:', errorMessage);
+            setError(errorMessage);
+            toast.error(errorMessage);
             throw err;
         } finally {
             setIsLoading(false);
@@ -95,8 +102,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const register = async (username: string, email: string, password: string) => {
         try {
-            setError(null);
             setIsLoading(true);
+            setError(null);
 
             const response = await apiService.post('/auth/register', {
                 username,
@@ -116,13 +123,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 localStorage.setItem('user', JSON.stringify(userData));
 
                 console.log('✅ Registration successful:', userData.username);
+                toast.success(`Welcome to Nebula Station, ${userData.username}!`);
             } else {
                 throw new Error(response.error || 'Registration failed');
             }
         } catch (err: any) {
             const errorMessage = err.message || 'Registration failed. Please try again.';
-            setError(errorMessage);
             console.error('❌ Registration error:', errorMessage);
+            setError(errorMessage);
+            toast.error(errorMessage);
             throw err;
         } finally {
             setIsLoading(false);
@@ -132,13 +141,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const logout = () => {
         setUser(null);
         setToken(null);
+        setError(null);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         console.log('✅ Logged out successfully');
-    };
-
-    const clearError = () => {
-        setError(null);
+        toast.success('Logged out successfully');
     };
 
     const value: AuthContextType = {
@@ -146,10 +153,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         token,
         isAuthenticated: !!user && !!token,
         isLoading,
+        error,
         login,
         register,
         logout,
-        error,
         clearError,
     };
 

@@ -73,6 +73,14 @@ app.use('/api/auth', authRoutes);
 const gameRoutes = require('./routes/gameRoutes');
 app.use('/api/game', gameRoutes);
 
+// Fleet routes
+const fleetRoutes = require('./routes/fleetRoutes');
+app.use('/api/fleet', fleetRoutes);
+
+// Social routes
+const socialRoutes = require('./routes/socialRoutes');
+app.use('/api/social', socialRoutes);
+
 // 404 handler
 app.use((req, res) => {
     res.status(404).json({
