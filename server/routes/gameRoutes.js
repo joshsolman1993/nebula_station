@@ -21,4 +21,19 @@ router.post('/build', gameController.buildBuilding);
 // @access  Private
 router.post('/research', gameController.researchTechnology);
 
+// @route   POST /api/game/equip
+// @desc    Equip an item
+// @access  Private
+router.post('/equip', gameController.equipItem);
+
+// @route   POST /api/game/unequip
+// @desc    Unequip an item
+// @access  Private
+router.post('/unequip', gameController.unequipItem);
+
+// @route   POST /api/game/talents/learn
+// @desc    Learn a talent
+// @access  Private
+router.post('/talents/learn', gameController.learnTalent);
+
 module.exports = router;

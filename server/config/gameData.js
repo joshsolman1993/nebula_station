@@ -127,6 +127,8 @@ const SHIPS = {
         capacityModifier: 1.0, // Normal capacity
         icon: '🛸',
         color: '#00f0ff', // neon-cyan
+        attack: 5,
+        defense: 20,
     },
     MINING_BARGE: {
         id: 'mining_barge',
@@ -142,6 +144,8 @@ const SHIPS = {
         capacityModifier: 2.0, // 2x capacity
         icon: '🚛',
         color: '#ff00ff', // neon-magenta
+        attack: 2,
+        defense: 100,
     },
     EXPLORER_SHIP: {
         id: 'explorer_ship',
@@ -158,6 +162,8 @@ const SHIPS = {
         icon: '🚀',
         color: '#ffbf00', // neon-amber
         requiredTech: 'hyperdrive_theory',
+        attack: 15,
+        defense: 50,
     },
 };
 
@@ -176,6 +182,7 @@ const MISSIONS = {
         icon: '☄️',
         difficulty: 'Easy',
         color: '#00f0ff',
+        requiredSectorType: 'ASTEROID_FIELD'
     },
     NEBULA_GAS: {
         id: 'nebula_gas',
@@ -190,7 +197,37 @@ const MISSIONS = {
         icon: '🌌',
         difficulty: 'Medium',
         color: '#ff00ff',
+        requiredSectorType: 'NEBULA'
     },
+    VOID_SALVAGE: {
+        id: 'void_salvage',
+        name: 'Void Salvage',
+        description: 'Salvage ancient technology from the void',
+        duration: 1200, // 20 minutes
+        baseReward: {
+            metal: 100,
+            crystal: 100,
+            energy: 0,
+            credits: 50
+        },
+        icon: '💀',
+        difficulty: 'Hard',
+        color: '#ff4444',
+        requiredSectorType: 'VOID'
+    },
+    SAFE_PATROL: {
+        id: 'safe_patrol',
+        name: 'Sector Patrol',
+        description: 'Patrol the safe haven for minor threats',
+        duration: 120, // 2 minutes
+        baseReward: {
+            credits: 20
+        },
+        icon: '🛡️',
+        difficulty: 'Easy',
+        color: '#4ade80',
+        requiredSectorType: 'SAFE_HAVEN'
+    }
 };
 
 // Technologies configuration
@@ -289,6 +326,139 @@ const getTechnologyById = (id) => {
     return Object.values(TECHNOLOGIES).find(tech => tech.id === id);
 };
 
+const ARTIFACTS = [
+    {
+        id: 'rusty_mining_drill',
+        name: 'Rusty Mining Drill',
+        description: 'An old but reliable drill that slightly improves metal extraction.',
+        rarity: 'common',
+        slot: 'tool',
+        effect: { type: 'production_bonus', resource: 'metal', value: 0.05 },
+        icon: 'DRILL'
+    },
+    {
+        id: 'crystal_focus_lens',
+        name: 'Crystal Focus Lens',
+        description: 'A precision lens that enhances crystal resonance.',
+        rarity: 'rare',
+        slot: 'tool',
+        effect: { type: 'production_bonus', resource: 'crystal', value: 0.10 },
+        icon: 'LENS'
+    },
+    {
+        id: 'void_engine_prototype',
+        name: 'Void Engine Prototype',
+        description: 'Experimental engine tech that warps space to reduce travel time.',
+        rarity: 'legendary',
+        slot: 'core',
+        effect: { type: 'mission_duration', value: 0.10 },
+        icon: 'ENGINE'
+    },
+    {
+        id: 'efficiency_module_mk1',
+        name: 'Efficiency Module Mk1',
+        description: 'Standard issue module that optimizes energy usage.',
+        rarity: 'common',
+        slot: 'core',
+        effect: { type: 'production_bonus', resource: 'energy', value: 0.05 },
+        icon: 'CHIP'
+    },
+    {
+        id: 'quantum_scanner',
+        name: 'Quantum Scanner',
+        description: 'Advanced sensors that locate richer mineral deposits.',
+        rarity: 'epic',
+        slot: 'tool',
+        effect: { type: 'production_bonus', resource: 'metal', value: 0.15 },
+        icon: 'SCANNER'
+    }
+];
+
+const ENEMIES = [
+    {
+        id: 'space_pirate_skiff',
+        name: 'Space Pirate Skiff',
+        description: 'A lightly armed vessel used by raiders.',
+        attack: 10,
+        hp: 50,
+        reward: {
+            credits: { min: 50, max: 150 },
+            metal: { min: 100, max: 300 }
+        },
+        difficulty: 'Easy',
+        icon: '☠️'
+    },
+    {
+        id: 'alien_drone_swarm',
+        name: 'Alien Drone Swarm',
+        description: 'A hive mind of automated defense drones.',
+        attack: 30,
+        hp: 100,
+        reward: {
+            crystal: { min: 50, max: 200 },
+            artifactChance: 0.1
+        },
+        difficulty: 'Medium',
+        icon: '👾'
+    },
+    {
+        id: 'void_leviathan',
+        name: 'Void Leviathan',
+        description: 'A massive biological entity living in deep space.',
+        attack: 80,
+        hp: 500,
+        reward: {
+            credits: { min: 500, max: 2000 },
+            artifactChance: 0.5
+        },
+        difficulty: 'Hard',
+        icon: '🐉'
+    }
+];
+
+const TUTORIAL_QUESTS = [
+    {
+        id: 'q_build_power',
+        title: 'Powering Up',
+        description: 'Build your first Solar Core to generate energy.',
+        type: 'BUILD',
+        target: 'solar_core',
+        reward: { metal: 200 }
+    },
+    {
+        id: 'q_mine_metal',
+        title: 'Extraction',
+        description: 'Build a Metal Extractor.',
+        type: 'BUILD',
+        target: 'metal_extractor',
+        reward: { energy: 100 }
+    },
+    {
+        id: 'q_craft_drone',
+        title: 'Eyes in the Sky',
+        description: 'Craft a Scout Drone in the Hangar.',
+        type: 'CRAFT',
+        target: 'scout_drone',
+        reward: { xp: 50, credits: 10 }
+    },
+    {
+        id: 'q_research_grid',
+        title: 'Knowledge is Power',
+        description: "Research 'Energy Grid Optimization'.",
+        type: 'RESEARCH',
+        target: 'energy_grid_optimization',
+        reward: { metal: 500, crystal: 500 }
+    },
+    {
+        id: 'q_first_blood',
+        title: 'Defend the Station',
+        description: 'Defeat a Space Pirate Skiff in Operations.',
+        type: 'COMBAT_WIN',
+        target: 'space_pirate_skiff',
+        reward: { itemId: 'rusty_mining_drill' }
+    }
+];
+
 module.exports = {
     BUILDINGS,
     SHIPS,
@@ -303,4 +473,107 @@ module.exports = {
     getMissionById,
     getAllTechnologies,
     getTechnologyById,
+    ARTIFACTS,
+    getArtifactById: (id) => ARTIFACTS.find(a => a.id === id),
+    ENEMIES,
+    getEnemyById: (id) => ENEMIES.find(e => e.id === id),
+    TUTORIAL_QUESTS,
+    getQuestById: (id) => TUTORIAL_QUESTS.find(q => q.id === id),
+    TALENTS: {
+        INDUSTRIALIST: [
+            {
+                id: 'efficient_mining',
+                name: 'Efficient Mining',
+                description: '+5% Metal & Crystal Production per level',
+                branch: 'INDUSTRIALIST',
+                tier: 1,
+                maxLevel: 5,
+                effect: { type: 'production_bonus', value: 0.05 }
+            },
+            {
+                id: 'cargo_optimization',
+                name: 'Cargo Optimization',
+                description: '+10% Ship Cargo Capacity per level',
+                branch: 'INDUSTRIALIST',
+                tier: 2,
+                maxLevel: 5,
+                effect: { type: 'cargo_bonus', value: 0.10 }
+            },
+            {
+                id: 'master_builder',
+                name: 'Master Builder',
+                description: '-10% Building Cost per level',
+                branch: 'INDUSTRIALIST',
+                tier: 3,
+                maxLevel: 5,
+                effect: { type: 'build_cost_reduction', value: 0.10 }
+            }
+        ],
+        WARLORD: [
+            {
+                id: 'targeting_systems',
+                name: 'Targeting Systems',
+                description: '+5% Ship Attack Power per level',
+                branch: 'WARLORD',
+                tier: 1,
+                maxLevel: 5,
+                effect: { type: 'attack_bonus', value: 0.05 }
+            },
+            {
+                id: 'reinforced_hulls',
+                name: 'Reinforced Hulls',
+                description: '+10% Ship HP per level',
+                branch: 'WARLORD',
+                tier: 2,
+                maxLevel: 5,
+                effect: { type: 'hp_bonus', value: 0.10 }
+            },
+            {
+                id: 'scavenger',
+                name: 'Scavenger',
+                description: '+15% Loot Chance in Combat per level',
+                branch: 'WARLORD',
+                tier: 3,
+                maxLevel: 5,
+                effect: { type: 'loot_bonus', value: 0.15 }
+            }
+        ],
+        SCIENTIST: [
+            {
+                id: 'overclocking',
+                name: 'Overclocking',
+                description: '+5% Energy Production per level',
+                branch: 'SCIENTIST',
+                tier: 1,
+                maxLevel: 5,
+                effect: { type: 'energy_bonus', value: 0.05 }
+            },
+            {
+                id: 'neural_network',
+                name: 'Neural Network',
+                description: '+10% XP Gain per level',
+                branch: 'SCIENTIST',
+                tier: 2,
+                maxLevel: 5,
+                effect: { type: 'xp_bonus', value: 0.10 }
+            },
+            {
+                id: 'eureka_moment',
+                name: 'Eureka Moment',
+                description: '-10% Research Cost per level',
+                branch: 'SCIENTIST',
+                tier: 3,
+                maxLevel: 5,
+                effect: { type: 'research_cost_reduction', value: 0.10 }
+            }
+        ]
+    },
+    getTalentById: (id) => {
+        const allTalents = [
+            ...module.exports.TALENTS.INDUSTRIALIST,
+            ...module.exports.TALENTS.WARLORD,
+            ...module.exports.TALENTS.SCIENTIST
+        ];
+        return allTalents.find(t => t.id === id);
+    }
 };

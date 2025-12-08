@@ -9,6 +9,7 @@ const Fleet = () => {
     const [userResources, setUserResources] = useState({ metal: 0, crystal: 0, energy: 0 });
     const [userCredits, setUserCredits] = useState(0);
     const [completedResearch, setCompletedResearch] = useState<string[]>([]);
+    const [damagedShips, setDamagedShips] = useState<Record<string, number>>({});
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
@@ -30,7 +31,9 @@ const Fleet = () => {
             if (stationResponse.success) {
                 setUserResources(stationResponse.user.resources);
                 setUserCredits(stationResponse.user.credits);
+                setUserCredits(stationResponse.user.credits);
                 setCompletedResearch(stationResponse.user.completedResearch || []);
+                setDamagedShips(stationResponse.user.damagedShips || {});
             }
         } catch (err) {
             console.error('Failed to load fleet data:', err);
@@ -71,6 +74,7 @@ const Fleet = () => {
                     activeMission={activeMission}
                     onUpdate={loadFleetData}
                     completedResearch={completedResearch}
+                    damagedShips={damagedShips}
                 />
             </div>
         </div>

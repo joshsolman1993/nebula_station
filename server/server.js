@@ -2,17 +2,31 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const mongoose = require('mongoose');
+const http = require('http');
+const { Server } = require('socket.io');
 
 // Load environment variables
 dotenv.config();
 
 // Initialize Express app
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: {
+        origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
+        methods: ["GET", "POST"]
+    }
+});
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Utils
+const seedAdmin = require('./utils/seedAdmin');
+const seedGalaxy = require('./utils/seedGalaxy');
+const socketHandler = require('./socket/socketHandler');
 
 // MongoDB Connection
 const connectDB = async () => {
@@ -20,18 +34,23 @@ const connectDB = async () => {
         if (process.env.MONGODB_URI) {
             await mongoose.connect(process.env.MONGODB_URI);
             console.log('🚀 MongoDB Connected Successfully');
+
+            // Seed Data
+            await seedAdmin();
+            await seedGalaxy();
         } else {
-            console.log('⚠️  MongoDB URI not found in .env - Database connection skipped');
-            console.log('   Add MONGODB_URI to server/.env to enable database');
+            console.log('⚠️  MongoDB URI not found in .env');
         }
     } catch (error) {
         console.error('❌ MongoDB Connection Error:', error.message);
-        // Don't exit process, allow server to run without DB for initial setup
     }
 };
 
 // Connect to database
 connectDB();
+
+// Initialize Socket Handler
+socketHandler(io);
 
 // Routes
 app.get('/', (req, res) => {
@@ -43,7 +62,6 @@ app.get('/', (req, res) => {
     });
 });
 
-// Health check endpoint
 app.get('/api/health', (req, res) => {
     res.json({
         status: 'healthy',
@@ -53,7 +71,6 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Test endpoint for client communication
 app.get('/api/test', (req, res) => {
     res.json({
         message: 'Server communication successful! 🎉',
@@ -65,28 +82,21 @@ app.get('/api/test', (req, res) => {
     });
 });
 
-// Auth routes
-const authRoutes = require('./routes/auth');
-app.use('/api/auth', authRoutes);
-
-// Game routes
-const gameRoutes = require('./routes/gameRoutes');
-app.use('/api/game', gameRoutes);
-
-// Fleet routes
-const fleetRoutes = require('./routes/fleetRoutes');
-app.use('/api/fleet', fleetRoutes);
-
-// Social routes
-const socialRoutes = require('./routes/socialRoutes');
-app.use('/api/social', socialRoutes);
+// Register Routes
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/game', require('./routes/gameRoutes'));
+app.use('/api/fleet', require('./routes/fleetRoutes'));
+app.use('/api/social', require('./routes/socialRoutes'));
+app.use('/api/combat', require('./routes/combatRoutes'));
+app.use('/api/quests', require('./routes/questRoutes'));
+app.use('/api/admin', require('./routes/adminRoutes'));
+app.use('/api/market', require('./routes/marketRoutes'));
+app.use('/api/galaxy', require('./routes/galaxyRoutes'));
+app.use('/api/alliance', require('./routes/allianceRoutes'));
 
 // 404 handler
 app.use((req, res) => {
-    res.status(404).json({
-        error: 'Endpoint not found',
-        path: req.path,
-    });
+    res.status(404).json({ error: 'Endpoint not found', path: req.path });
 });
 
 // Error handler
@@ -100,12 +110,13 @@ app.use((err, req, res, next) => {
 
 // Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('🌌 NEBULA STATION - Backend Server');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📡 API available at http://localhost:${PORT}/api`);
+    console.log(`🔌 Socket.io active`);
     console.log(`🏥 Health check: http://localhost:${PORT}/api/health`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');

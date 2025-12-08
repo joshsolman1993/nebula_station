@@ -17,6 +17,34 @@ interface User {
     credits: number;
     lastLogin?: Date;
     completedResearch?: string[];
+    inventory?: { itemId: string; quantity: number }[];
+    equipment?: { toolSlot: string | null; coreSlot: string | null };
+    damagedShips?: Record<string, number>;
+    ships?: Record<string, number>;
+    completedQuests?: string[];
+    currentQuestIndex?: number;
+    role?: 'user' | 'admin';
+    talentPoints: number;
+    talents: Record<string, number>;
+    currentSector?: string;
+    travelStatus?: {
+        destination: string;
+        arrivalTime: string;
+    };
+    alliance?: {
+        _id: string;
+        name: string;
+        tag: string;
+    } | null;
+    allianceRole?: 'Leader' | 'Officer' | 'Member' | null;
+    activeMission?: {
+        missionId: string;
+        shipId: string;
+        shipCount: number;
+        startTime: Date;
+        endTime: Date;
+        potentialReward: any;
+    } | null;
 }
 
 interface AuthContextType {
@@ -29,6 +57,8 @@ interface AuthContextType {
     register: (username: string, email: string, password: string) => Promise<void>;
     logout: () => void;
     clearError: () => void;
+    updateUser: (user: User) => void;
+    refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -148,6 +178,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         toast.success('Logged out successfully');
     };
 
+    const updateUser = (userData: User) => {
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+    };
+
+    const refreshUser = async () => {
+        try {
+            const response = await apiService.get('/auth/me');
+            if (response.success) {
+                updateUser(response.user);
+            }
+        } catch (error) {
+            console.error('Failed to refresh user:', error);
+        }
+    };
+
     const value: AuthContextType = {
         user,
         token,
@@ -158,6 +204,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         register,
         logout,
         clearError,
+        updateUser,
+        refreshUser,
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

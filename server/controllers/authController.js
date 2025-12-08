@@ -83,13 +83,19 @@ exports.register = async (req, res) => {
                 xp: user.xp,
                 level: user.level,
                 credits: user.credits,
+                completedQuests: user.completedQuests,
+                completedQuests: user.completedQuests,
+                currentQuestIndex: user.currentQuestIndex,
+                role: user.role,
+                talentPoints: user.talentPoints,
+                talents: user.talents,
             },
         });
     } catch (error) {
         console.error('❌ Registration error:', error);
         res.status(500).json({
             success: false,
-            error: 'Registration failed. Please try again.',
+            error: error.message || 'Registration failed. Please try again.',
         });
     }
 };
@@ -137,6 +143,7 @@ exports.login = async (req, res) => {
         const token = generateToken(user._id);
 
         console.log(`✅ User logged in: ${user.username}`);
+        console.log(`👤 User Role: ${user.role}`); // Debug log
 
         res.json({
             success: true,
@@ -150,7 +157,12 @@ exports.login = async (req, res) => {
                 xp: user.xp,
                 level: user.level,
                 credits: user.credits,
+                completedQuests: user.completedQuests,
+                currentQuestIndex: user.currentQuestIndex,
                 lastLogin: user.lastLogin,
+                role: user.role,
+                talentPoints: user.talentPoints,
+                talents: user.talents,
             },
         });
     } catch (error) {
@@ -165,9 +177,12 @@ exports.login = async (req, res) => {
 // @desc    Get current user
 // @route   GET /api/auth/me
 // @access  Private
+// @desc    Get current user
+// @route   GET /api/auth/me
+// @access  Private
 exports.getCurrentUser = async (req, res) => {
     try {
-        const user = await User.findById(req.userId);
+        const user = await User.findById(req.userId).populate('alliance', 'name tag');
 
         if (!user) {
             return res.status(404).json({
@@ -186,7 +201,23 @@ exports.getCurrentUser = async (req, res) => {
                 xp: user.xp,
                 level: user.level,
                 credits: user.credits,
+                completedQuests: user.completedQuests,
+                currentQuestIndex: user.currentQuestIndex,
                 lastLogin: user.lastLogin,
+                role: user.role,
+                talentPoints: user.talentPoints,
+                talents: user.talents,
+                currentSector: user.currentSector,
+                travelStatus: user.travelStatus,
+                ships: user.ships, // Ensure ships are returned
+                damagedShips: user.damagedShips, // Ensure damaged ships are returned
+                activeMission: user.activeMission, // Return active mission for availability checks
+                alliance: user.alliance ? {
+                    _id: user.alliance._id,
+                    name: user.alliance.name,
+                    tag: user.alliance.tag
+                } : null,
+                allianceRole: user.allianceRole
             },
         });
     } catch (error) {

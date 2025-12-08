@@ -15,6 +15,7 @@ interface FleetOperationsProps {
     activeMission: any;
     onUpdate: () => void;
     completedResearch: string[];
+    damagedShips?: Record<string, number>;
 }
 
 const FleetOperations = ({
@@ -24,6 +25,7 @@ const FleetOperations = ({
     activeMission,
     onUpdate,
     completedResearch,
+    damagedShips = {},
 }: FleetOperationsProps) => {
     const [isCrafting, setIsCrafting] = useState(false);
     const [isLaunching, setIsLaunching] = useState(false);
@@ -133,6 +135,43 @@ const FleetOperations = ({
                         duration: 5000,
                     }
                 );
+
+                // Show Artifact Drop Notification
+                if (response.droppedArtifact) {
+                    const artifact = response.droppedArtifact;
+                    const rarityColors = {
+                        common: 'text-gray-400',
+                        rare: 'text-blue-400',
+                        epic: 'text-purple-400',
+                        legendary: 'text-yellow-400'
+                    };
+                    const colorClass = rarityColors[artifact.rarity as keyof typeof rarityColors] || 'text-white';
+
+                    setTimeout(() => {
+                        toast(
+                            <div className="flex items-center gap-3">
+                                <div className="text-2xl">🎁</div>
+                                <div>
+                                    <div className={`font-bold font-orbitron ${colorClass} animate-pulse`}>
+                                        ARTIFACT FOUND!
+                                    </div>
+                                    <div className="text-sm font-rajdhani text-white">
+                                        {artifact.name}
+                                    </div>
+                                </div>
+                            </div>,
+                            {
+                                duration: 6000,
+                                style: {
+                                    background: 'rgba(0, 0, 0, 0.9)',
+                                    border: '1px solid rgba(0, 240, 255, 0.3)',
+                                    color: '#fff',
+                                },
+                            }
+                        );
+                    }, 500);
+                }
+
                 onUpdate();
             }
         } catch (err: any) {
@@ -209,6 +248,11 @@ const FleetOperations = ({
                                                 {owned}
                                             </div>
                                             <div className="text-xs text-gray-500 font-rajdhani">Owned</div>
+                                            {(damagedShips[ship.id] || 0) > 0 && (
+                                                <div className="text-xs text-red-500 font-rajdhani font-bold animate-pulse">
+                                                    {damagedShips[ship.id]} Damaged
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 

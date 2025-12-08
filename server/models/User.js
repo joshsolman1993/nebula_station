@@ -23,6 +23,11 @@ const userSchema = new mongoose.Schema({
         required: [true, 'Password is required'],
         minlength: [6, 'Password must be at least 6 characters'],
     },
+    role: {
+        type: String,
+        enum: ['user', 'admin'],
+        default: 'user'
+    },
     // Game Resources
     resources: {
         metal: {
@@ -46,6 +51,35 @@ const userSchema = new mongoose.Schema({
     level: {
         type: Number,
         default: 1,
+    },
+    talentPoints: {
+        type: Number,
+        default: 0
+    },
+    talents: {
+        type: Map,
+        of: Number,
+        default: {}
+    },
+    // Galaxy Location
+    currentSector: {
+        type: String,
+        default: 'sec_alpha'
+    },
+    travelStatus: {
+        destination: String,
+        arrivalTime: Date
+    },
+    // Alliance
+    alliance: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Alliance',
+        default: null
+    },
+    allianceRole: {
+        type: String,
+        enum: ['Leader', 'Officer', 'Member'],
+        default: undefined
     },
     // Premium Currency
     credits: {
@@ -71,6 +105,37 @@ const userSchema = new mongoose.Schema({
     completedResearch: [{
         type: String,
     }],
+    inventory: [{
+        itemId: {
+            type: String,
+            required: true
+        },
+        quantity: {
+            type: Number,
+            default: 1
+        }
+    }],
+    equipment: {
+        toolSlot: {
+            type: String,
+            default: null
+        },
+        coreSlot: {
+            type: String,
+            default: null
+        }
+    },
+    damagedShips: {
+        type: Map,
+        of: Number,
+        default: {}
+    },
+    // Quest System
+    completedQuests: [{ type: String }],
+    currentQuestIndex: { type: Number, default: 0 },
+    stats: {
+        enemiesDefeated: { type: Map, of: Number, default: {} }
+    },
     activeMission: {
         type: {
             missionId: String,

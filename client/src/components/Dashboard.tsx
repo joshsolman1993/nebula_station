@@ -5,6 +5,7 @@ import BuildingMenu from './BuildingMenu';
 import EnergyStatus from './EnergyStatus';
 import { BUILDINGS, getBuildingById } from '../config/gameData';
 import gameService from '../services/gameService';
+import TutorialAdvisor from './TutorialAdvisor';
 import { Hammer, Gem, Zap, Coins } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -22,8 +23,11 @@ interface ProductionRates {
     energy: number;
 }
 
+import { useSound } from '../contexts/SoundContext';
+
 const Dashboard = () => {
-    const { user } = useAuth();
+    const { user, updateUser } = useAuth();
+    const { playSfx } = useSound();
     const [stationLayout, setStationLayout] = useState<StationBuilding[]>([]);
     const [stationSize, setStationSize] = useState(8);
     const [selectedCell, setSelectedCell] = useState<{ x: number; y: number } | null>(null);
@@ -91,6 +95,10 @@ const Dashboard = () => {
                 setDisplayResources(response.user.resources);
                 setDisplayCredits(response.user.credits);
                 setCompletedResearch(response.user.completedResearch || []);
+
+                // Update global user context (important for quests)
+                updateUser(response.user);
+
                 lastUpdateRef.current = Date.now();
             }
         } catch (err: any) {
@@ -138,6 +146,7 @@ const Dashboard = () => {
                 setSelectedCell(null);
 
                 const buildingData = getBuildingById(buildingId);
+                playSfx('build');
                 toast.success(`Construction started: ${buildingData?.name}`, {
                     icon: '🏗️',
                 });
@@ -157,11 +166,12 @@ const Dashboard = () => {
             {/* Main Content */}
             <main className="max-w-7xl mx-auto px-4">
                 {/* Page Title */}
-                <div className="text-center mb-8">
-                    <h1 className="font-orbitron text-4xl font-bold bg-gradient-to-r from-neon-cyan to-neon-magenta bg-clip-text text-transparent mb-2">
-                        🏠 COMMAND CENTER
-                    </h1>
-                    <p className="font-rajdhani text-gray-400">Build and manage your station</p>
+                {/* Header Compact */}
+                <div className="mb-6 flex justify-between items-center">
+                    <div>
+                        <h2 className="font-orbitron text-2xl font-bold text-white">Station Overview</h2>
+                        <p className="font-rajdhani text-gray-400 text-sm">Manage your layout and buildings</p>
+                    </div>
                 </div>
 
                 {/* Resources Bar with Production Rates - Sticky */}
@@ -286,6 +296,7 @@ const Dashboard = () => {
                     </div>
                 </div>
             </main>
+            <TutorialAdvisor />
         </div>
     );
 };

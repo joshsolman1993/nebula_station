@@ -2,10 +2,24 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 class ApiService {
+    // Helper to get headers with token
+    private getHeaders(): HeadersInit {
+        const headers: any = {
+            'Content-Type': 'application/json',
+        };
+        const token = localStorage.getItem('token');
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        return headers;
+    }
+
     // Generic GET request
     async get(endpoint: string) {
         try {
-            const response = await fetch(`${API_URL}${endpoint}`);
+            const response = await fetch(`${API_URL}${endpoint}`, {
+                headers: this.getHeaders(),
+            });
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -21,9 +35,7 @@ class ApiService {
         try {
             const response = await fetch(`${API_URL}${endpoint}`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: this.getHeaders(),
                 body: JSON.stringify(data),
             });
 

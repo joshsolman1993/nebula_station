@@ -1,4 +1,4 @@
-const { getBuildingById, TECHNOLOGIES } = require('../config/gameData');
+const { getBuildingById, TECHNOLOGIES, getArtifactById } = require('../config/gameData');
 
 /**
  * Calculate and apply resource production based on elapsed time
@@ -65,6 +65,36 @@ const calculateProduction = (user, station) => {
     if (user.completedResearch && user.completedResearch.includes(TECHNOLOGIES.ENERGY_GRID_OPTIMIZATION.id)) {
         const bonus = TECHNOLOGIES.ENERGY_GRID_OPTIMIZATION.effect.value;
         totalProduction.energy *= (1 + bonus);
+    }
+    // Apply Talent Bonuses
+    if (user.talents) {
+        // Efficient Mining: +5% Metal & Crystal per level
+        if (user.talents.get('efficient_mining')) {
+            const level = user.talents.get('efficient_mining');
+            const bonus = level * 0.05;
+            totalProduction.metal *= (1 + bonus);
+            totalProduction.crystal *= (1 + bonus);
+        }
+        // Overclocking: +5% Energy per level
+        if (user.talents.get('overclocking')) {
+            const level = user.talents.get('overclocking');
+            const bonus = level * 0.05;
+            totalProduction.energy *= (1 + bonus);
+        }
+    }
+
+    // Apply Artifact Bonuses
+    if (user.equipment) {
+        Object.values(user.equipment).forEach(itemId => {
+            if (!itemId) return;
+            const artifact = getArtifactById(itemId);
+            if (artifact && artifact.effect.type === 'production_bonus') {
+                const { resource, value } = artifact.effect;
+                if (totalProduction[resource] !== undefined) {
+                    totalProduction[resource] *= (1 + value);
+                }
+            }
+        });
     }
 
     // Calculate net energy balance
@@ -155,10 +185,35 @@ const getProductionRates = (station, user) => {
         }
     });
 
-    // Apply Research Bonuses
-    if (user && user.completedResearch && user.completedResearch.includes(TECHNOLOGIES.ENERGY_GRID_OPTIMIZATION.id)) {
-        const bonus = TECHNOLOGIES.ENERGY_GRID_OPTIMIZATION.effect.value;
-        totalProduction.energy *= (1 + bonus);
+    // Apply Talent Bonuses
+    if (user && user.talents) {
+        // Efficient Mining: +5% Metal & Crystal per level
+        if (user.talents.get('efficient_mining')) {
+            const level = user.talents.get('efficient_mining');
+            const bonus = level * 0.05;
+            totalProduction.metal *= (1 + bonus);
+            totalProduction.crystal *= (1 + bonus);
+        }
+        // Overclocking: +5% Energy per level
+        if (user.talents.get('overclocking')) {
+            const level = user.talents.get('overclocking');
+            const bonus = level * 0.05;
+            totalProduction.energy *= (1 + bonus);
+        }
+    }
+
+    // Apply Artifact Bonuses
+    if (user && user.equipment) {
+        Object.values(user.equipment).forEach(itemId => {
+            if (!itemId) return;
+            const artifact = getArtifactById(itemId);
+            if (artifact && artifact.effect.type === 'production_bonus') {
+                const { resource, value } = artifact.effect;
+                if (totalProduction[resource] !== undefined) {
+                    totalProduction[resource] *= (1 + value);
+                }
+            }
+        });
     }
 
     const netEnergy = totalProduction.energy - totalConsumption.energy;

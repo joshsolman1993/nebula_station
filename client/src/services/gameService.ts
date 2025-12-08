@@ -83,6 +83,154 @@ class GameService {
             throw error;
         }
     }
+
+    async equipItem(itemId: string, slot: string) {
+        try {
+            const token = this.getToken();
+            const response = await fetch(`${API_URL}/game/equip`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({ itemId, slot }),
+            });
+
+            const jsonData = await response.json();
+
+            if (!response.ok) {
+                throw new Error(jsonData.error || `HTTP error! status: ${response.status}`);
+            }
+
+            return jsonData;
+        } catch (error: any) {
+            console.error('Game API Equip Error:', error);
+            throw error;
+        }
+    }
+
+    async unequipItem(slot: string) {
+        try {
+            const token = this.getToken();
+            const response = await fetch(`${API_URL}/game/unequip`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({ slot }),
+            });
+
+            const jsonData = await response.json();
+
+            if (!response.ok) {
+                throw new Error(jsonData.error || `HTTP error! status: ${response.status}`);
+            }
+
+            return jsonData;
+        } catch (error: any) {
+            console.error('Game API Unequip Error:', error);
+            throw error;
+        }
+    }
+
+    async attackEnemy(enemyId: string, fleetComposition: Record<string, number>) {
+        try {
+            const token = this.getToken();
+            const response = await fetch(`${API_URL}/combat/attack`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({ enemyId, fleetComposition }),
+            });
+
+            const jsonData = await response.json();
+
+            if (!response.ok) {
+                throw new Error(jsonData.error || `HTTP error! status: ${response.status}`);
+            }
+
+            return jsonData;
+        } catch (error: any) {
+            console.error('Combat API Attack Error:', error);
+            throw error;
+        }
+    }
+
+    async repairShip(shipId: string) {
+        try {
+            const token = this.getToken();
+            const response = await fetch(`${API_URL}/combat/repair`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({ shipId }),
+            });
+
+            const jsonData = await response.json();
+
+            if (!response.ok) {
+                throw new Error(jsonData.error || `HTTP error! status: ${response.status}`);
+            }
+
+            return jsonData;
+        } catch (error: any) {
+            console.error('Combat API Repair Error:', error);
+            throw error;
+        }
+    }
+
+    async claimQuest() {
+        try {
+            const token = this.getToken();
+            const response = await fetch(`${API_URL}/quests/claim`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            const jsonData = await response.json();
+
+            if (!response.ok) {
+                throw new Error(jsonData.error || `HTTP error! status: ${response.status}`);
+            }
+
+            return jsonData;
+        } catch (error: any) {
+            console.error('Quest API Claim Error:', error);
+            throw error;
+        }
+    }
+
+    async getQuestStatus() {
+        try {
+            const token = this.getToken();
+            const response = await fetch(`${API_URL}/quests/status`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            const jsonData = await response.json();
+
+            if (!response.ok) {
+                throw new Error(jsonData.error || `HTTP error! status: ${response.status}`);
+            }
+
+            return jsonData;
+        } catch (error: any) {
+            console.error('Quest API Status Error:', error);
+            throw error;
+        }
+    }
 }
 
 export default new GameService();

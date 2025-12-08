@@ -10,12 +10,15 @@ export interface User {
     resources: Resources;
     lastLogin: Date;
     createdAt: Date;
+    role: 'user' | 'admin';
 }
 
 export interface Resources {
     credits: number;
-    minerals: number;
+    metal: number;
+    crystal: number;
     energy: number;
+    minerals?: number; // Deprecated, keeping for safety until refactor
 }
 
 export interface Station {

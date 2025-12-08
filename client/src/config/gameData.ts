@@ -141,6 +141,8 @@ export interface Ship {
     icon: string;
     color: string;
     requiredTech?: string;
+    attack?: number;
+    defense?: number;
 }
 
 export const SHIPS: Ship[] = [
@@ -158,6 +160,8 @@ export const SHIPS: Ship[] = [
         capacityModifier: 1.0,
         icon: '🛸',
         color: '#00f0ff',
+        attack: 5,
+        defense: 20,
     },
     {
         id: 'mining_barge',
@@ -173,6 +177,8 @@ export const SHIPS: Ship[] = [
         capacityModifier: 2.0,
         icon: '🚛',
         color: '#ff00ff',
+        attack: 2,
+        defense: 100,
     },
     {
         id: 'explorer_ship',
@@ -189,7 +195,188 @@ export const SHIPS: Ship[] = [
         icon: '🚀',
         color: '#ffbf00',
         requiredTech: 'hyperdrive_theory',
+        attack: 15,
+        defense: 50,
     },
+];
+
+export interface Artifact {
+    id: string;
+    name: string;
+    description: string;
+    rarity: 'common' | 'rare' | 'epic' | 'legendary';
+    slot: 'tool' | 'core';
+    effect: {
+        type: string;
+        resource?: string;
+        value: number;
+    };
+    icon: string;
+}
+
+export const ARTIFACTS: Artifact[] = [
+    {
+        id: 'rusty_mining_drill',
+        name: 'Rusty Mining Drill',
+        description: 'An old but reliable drill that slightly improves metal extraction.',
+        rarity: 'common',
+        slot: 'tool',
+        effect: { type: 'production_bonus', resource: 'metal', value: 0.05 },
+        icon: 'DRILL'
+    },
+    {
+        id: 'crystal_focus_lens',
+        name: 'Crystal Focus Lens',
+        description: 'A precision lens that enhances crystal resonance.',
+        rarity: 'rare',
+        slot: 'tool',
+        effect: { type: 'production_bonus', resource: 'crystal', value: 0.10 },
+        icon: 'LENS'
+    },
+    {
+        id: 'void_engine_prototype',
+        name: 'Void Engine Prototype',
+        description: 'Experimental engine tech that warps space to reduce travel time.',
+        rarity: 'legendary',
+        slot: 'core',
+        effect: { type: 'mission_duration', value: 0.10 },
+        icon: 'ENGINE'
+    },
+    {
+        id: 'efficiency_module_mk1',
+        name: 'Efficiency Module Mk1',
+        description: 'Standard issue module that optimizes energy usage.',
+        rarity: 'common',
+        slot: 'core',
+        effect: { type: 'production_bonus', resource: 'energy', value: 0.05 },
+        icon: 'CHIP'
+    },
+    {
+        id: 'quantum_scanner',
+        name: 'Quantum Scanner',
+        description: 'Advanced sensors that locate richer mineral deposits.',
+        rarity: 'epic',
+        slot: 'tool',
+        effect: { type: 'production_bonus', resource: 'metal', value: 0.15 },
+        icon: 'SCANNER'
+    }
+];
+
+export interface Enemy {
+    id: string;
+    name: string;
+    description: string;
+    attack: number;
+    hp: number;
+    reward: {
+        credits?: { min: number; max: number };
+        metal?: { min: number; max: number };
+        crystal?: { min: number; max: number };
+        artifactChance?: number;
+    };
+    difficulty: 'Easy' | 'Medium' | 'Hard';
+    icon: string;
+}
+
+export const ENEMIES: Enemy[] = [
+    {
+        id: 'space_pirate_skiff',
+        name: 'Space Pirate Skiff',
+        description: 'A lightly armed vessel used by raiders.',
+        attack: 10,
+        hp: 50,
+        reward: {
+            credits: { min: 50, max: 150 },
+            metal: { min: 100, max: 300 }
+        },
+        difficulty: 'Easy',
+        icon: '☠️'
+    },
+    {
+        id: 'alien_drone_swarm',
+        name: 'Alien Drone Swarm',
+        description: 'A hive mind of automated defense drones.',
+        attack: 30,
+        hp: 100,
+        reward: {
+            crystal: { min: 50, max: 200 },
+            artifactChance: 0.1
+        },
+        difficulty: 'Medium',
+        icon: '👾'
+    },
+    {
+        id: 'void_leviathan',
+        name: 'Void Leviathan',
+        description: 'A massive biological entity living in deep space.',
+        attack: 80,
+        hp: 500,
+        reward: {
+            credits: { min: 500, max: 2000 },
+            artifactChance: 0.5
+        },
+        difficulty: 'Hard',
+        icon: '🐉'
+    }
+];
+
+export interface Quest {
+    id: string;
+    title: string;
+    description: string;
+    type: 'BUILD' | 'CRAFT' | 'RESEARCH' | 'COMBAT_WIN';
+    target: string;
+    reward: {
+        metal?: number;
+        crystal?: number;
+        energy?: number;
+        credits?: number;
+        xp?: number;
+        itemId?: string;
+    };
+}
+
+export const TUTORIAL_QUESTS: Quest[] = [
+    {
+        id: 'q_build_power',
+        title: 'Powering Up',
+        description: 'Build your first Solar Core to generate energy.',
+        type: 'BUILD',
+        target: 'solar_core',
+        reward: { metal: 200 }
+    },
+    {
+        id: 'q_mine_metal',
+        title: 'Extraction',
+        description: 'Build a Metal Extractor.',
+        type: 'BUILD',
+        target: 'metal_extractor',
+        reward: { energy: 100 }
+    },
+    {
+        id: 'q_craft_drone',
+        title: 'Eyes in the Sky',
+        description: 'Craft a Scout Drone in the Hangar.',
+        type: 'CRAFT',
+        target: 'scout_drone',
+        reward: { xp: 50, credits: 10 }
+    },
+    {
+        id: 'q_research_grid',
+        title: 'Knowledge is Power',
+        description: "Research 'Energy Grid Optimization'.",
+        type: 'RESEARCH',
+        target: 'energy_grid_optimization',
+        reward: { metal: 500, crystal: 500 }
+    },
+    {
+        id: 'q_first_blood',
+        title: 'Defend the Station',
+        description: 'Defeat a Space Pirate Skiff in Operations.',
+        type: 'COMBAT_WIN',
+        target: 'space_pirate_skiff',
+        reward: { itemId: 'rusty_mining_drill' }
+    }
 ];
 
 export interface Mission {

@@ -1,5 +1,5 @@
 const User = require('../models/User');
-const { getShipById, getMissionById } = require('../config/gameData');
+const { getShipById, getMissionById, ARTIFACTS } = require('../config/gameData');
 const { calculateProduction } = require('../utils/productionEngine');
 const Station = require('../models/Station');
 
@@ -100,6 +100,7 @@ exports.craftShip = async (req, res) => {
                 resources: user.resources,
                 credits: user.credits,
                 ships: user.ships,
+                role: user.role,
             },
         });
     } catch (error) {
@@ -150,6 +151,20 @@ exports.startMission = async (req, res) => {
                 success: false,
                 error: 'User not found',
             });
+        }
+
+        // Check Sector Compatibility
+        if (missionData.requiredSectorType) {
+            const { getSectorById } = require('../utils/galaxyGenerator');
+            const currentSectorId = user.currentSector || 'sec_alpha';
+            const sector = getSectorById(currentSectorId);
+
+            if (!sector || sector.type !== missionData.requiredSectorType) {
+                return res.status(400).json({
+                    success: false,
+                    error: `Mission requires ${missionData.requiredSectorType} sector. Current: ${sector ? sector.type : 'Unknown'}`,
+                });
+            }
         }
 
         // Check if user already has an active mission
@@ -266,6 +281,33 @@ exports.claimMission = async (req, res) => {
         user.resources.crystal += actualReward.crystal;
         user.resources.energy += actualReward.energy;
 
+        // Artifact Drop Logic (30% chance)
+        let droppedArtifact = null;
+        if (Math.random() < 0.30) {
+            // Select random artifact based on rarity weights
+            // Simple weighted random: Common (60%), Rare (25%), Epic (10%), Legendary (5%)
+            const rand = Math.random();
+            let rarity = 'common';
+            if (rand > 0.95) rarity = 'legendary';
+            else if (rand > 0.85) rarity = 'epic';
+            else if (rand > 0.60) rarity = 'rare';
+
+            const possibleArtifacts = ARTIFACTS.filter(a => a.rarity === rarity);
+            if (possibleArtifacts.length > 0) {
+                const artifact = possibleArtifacts[Math.floor(Math.random() * possibleArtifacts.length)];
+
+                // Add to inventory
+                const existingItem = user.inventory.find(i => i.itemId === artifact.id);
+                if (existingItem) {
+                    existingItem.quantity += 1;
+                } else {
+                    user.inventory.push({ itemId: artifact.id, quantity: 1 });
+                }
+                droppedArtifact = artifact;
+                console.log(`🎁 Artifact dropped for ${user.username}: ${artifact.name} (${rarity})`);
+            }
+        }
+
         // Return ships to fleet
         const shipId = user.activeMission.shipId;
         const shipCount = user.activeMission.shipCount;
@@ -290,6 +332,7 @@ exports.claimMission = async (req, res) => {
             success: true,
             message: 'Mission completed successfully!',
             reward: actualReward,
+            droppedArtifact,
             completedMission,
             user: {
                 id: user._id,
@@ -297,6 +340,8 @@ exports.claimMission = async (req, res) => {
                 resources: user.resources,
                 credits: user.credits,
                 ships: user.ships,
+                inventory: user.inventory,
+                role: user.role,
             },
         });
     } catch (error) {
