@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const Station = require('../models/Station');
+const GlobalConfig = require('../models/GlobalConfig');
 const jwt = require('jsonwebtoken');
 
 // Generate JWT Token
@@ -56,6 +57,8 @@ exports.register = async (req, res) => {
             username,
             email,
             password,
+            resources: { metal: 1000, crystal: 500, energy: 100 },
+            credits: 1000
         });
 
         // Create station for the new user
@@ -115,6 +118,13 @@ exports.login = async (req, res) => {
             });
         }
 
+        // Check Maintenance Mode
+        const maintenanceConfig = await GlobalConfig.findOne({ key: 'MAINTENANCE_MODE' });
+        if (maintenanceConfig && maintenanceConfig.value === true) {
+            // Check if user is admin (we need to fetch user first if we want to bypass for admin)
+            // But here we haven't fetched user yet. Let's fetch user first.
+        }
+
         // Find user by email
         const user = await User.findOne({ email }).select('+password');
 
@@ -125,6 +135,14 @@ exports.login = async (req, res) => {
             });
         }
 
+        // Check Maintenance Mode
+        if (maintenanceConfig && maintenanceConfig.value === true && user.role !== 'admin') {
+            return res.status(503).json({
+                success: false,
+                error: 'Server is currently under maintenance. Please try again later.'
+            });
+        }
+
         // Check password
         const isPasswordCorrect = await user.comparePassword(password);
 
@@ -132,6 +150,14 @@ exports.login = async (req, res) => {
             return res.status(401).json({
                 success: false,
                 error: 'Invalid credentials',
+            });
+        }
+
+        // Check Ban Status
+        if (user.isBanned) {
+            return res.status(403).json({
+                success: false,
+                error: `Access Denied: You are banned. Reason: ${user.banReason || 'Violation of conduct'}`
             });
         }
 

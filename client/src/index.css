@@ -1,8 +1,25 @@
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* Custom Animations */
+@layer utilities {
+  .animate-shine {
+    animation: shine 2s infinite;
+  }
+}
+
+@keyframes shine {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
 
 /* Global Styles */
 @layer base {
@@ -25,7 +42,8 @@
 
   body {
     @apply m-0 min-w-[320px] min-h-screen overflow-x-hidden;
-    background: linear-gradient(135deg, #0a0a12 0%, #1a1a2e 50%, #16213e 100%);
+    @apply m-0 min-w-[320px] min-h-screen overflow-x-hidden;
+    background: transparent;
   }
 
   #root {
@@ -80,6 +98,18 @@
   .animate-pulse-slow {
     animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
+
+  .text-shadow-glow {
+    text-shadow: 0 0 10px currentColor;
+  }
+
+  .box-glow {
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+  }
+
+  .box-glow-hover:hover {
+    box-shadow: 0 0 25px rgba(0, 240, 255, 0.4);
+  }
 }
 
 /* Keyframes */
@@ -98,6 +128,7 @@
     transform: scale(0);
     opacity: 0;
   }
+
   to {
     transform: scale(1);
     opacity: 1;

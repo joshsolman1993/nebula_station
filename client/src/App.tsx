@@ -4,6 +4,7 @@ import { useAuth } from './contexts/AuthContext';
 import LandingPage from './components/LandingPage';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
+import StarfieldBackground from './components/effects/StarfieldBackground';
 import Fleet from './pages/Fleet';
 import Operations from './pages/Operations';
 import Research from './pages/Research';
@@ -65,6 +66,7 @@ function App() {
           }}
         />
         <Layout>
+          <StarfieldBackground />
           <Routes>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/fleet" element={<Fleet />} />

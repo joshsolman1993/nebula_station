@@ -13,7 +13,21 @@ const allianceSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Tag is required'],
         unique: true,
-        credits: { type: Number, default: 0 }
+        uppercase: true
+    },
+    leader: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
+    members: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
+    resources: {
+        credits: { type: Number, default: 0 },
+        metal: { type: Number, default: 0 },
+        crystal: { type: Number, default: 0 },
+        energy: { type: Number, default: 0 }
     },
     level: {
         type: Number,

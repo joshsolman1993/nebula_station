@@ -28,6 +28,11 @@ const userSchema = new mongoose.Schema({
         enum: ['user', 'admin'],
         default: 'user'
     },
+    // Moderation
+    isBanned: { type: Boolean, default: false },
+    banReason: { type: String, default: '' },
+    isMuted: { type: Boolean, default: false },
+    muteExpiresAt: { type: Date, default: null },
     // Game Resources
     resources: {
         metal: {

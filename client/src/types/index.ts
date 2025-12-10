@@ -11,6 +11,10 @@ export interface User {
     lastLogin: Date;
     createdAt: Date;
     role: 'user' | 'admin';
+    isBanned?: boolean;
+    banReason?: string;
+    isMuted?: boolean;
+    muteExpiresAt?: Date;
 }
 
 export interface Resources {
@@ -104,4 +108,56 @@ export interface HealthCheckResponse {
     database: string;
     uptime: number;
     timestamp: string;
+}
+
+export interface Sector {
+    id: string;
+    name: string;
+    x: number;
+    y: number;
+    type: string;
+    difficulty: number;
+    connections: string[];
+    resources?: {
+        metal: number;
+        crystal: number;
+        energy: number;
+    };
+    ownerAllianceId?: string;
+    currentDefense?: number;
+    maxDefense?: number;
+    structures?: string[];
+}
+
+export interface MarketListing {
+    _id: string;
+    seller: {
+        _id: string;
+        username: string;
+        email?: string;
+    };
+    type: 'RESOURCE' | 'ARTIFACT';
+    content: any;
+    price: number;
+    createdAt: string;
+}
+
+export interface Alliance {
+    _id: string;
+    name: string;
+    tag: string;
+    leader?: {
+        _id: string;
+        username: string;
+        email: string;
+    };
+    memberCount: number;
+    level: number;
+    resources: {
+        credits: number;
+        metal: number;
+        crystal: number;
+        energy: number;
+    };
+    createdAt: string;
 }

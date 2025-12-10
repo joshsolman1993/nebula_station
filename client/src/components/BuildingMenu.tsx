@@ -35,6 +35,8 @@ interface BuildingMenuProps {
     selectedCell: { x: number; y: number } | null;
     isBuilding: boolean;
     completedResearch: string[];
+    selectedBuildingId: string | null;
+    onSelectBuilding: (id: string | null) => void;
 }
 
 const BuildingMenu = ({
@@ -45,8 +47,9 @@ const BuildingMenu = ({
     selectedCell,
     isBuilding,
     completedResearch,
+    selectedBuildingId,
+    onSelectBuilding,
 }: BuildingMenuProps) => {
-    const [selectedBuilding, setSelectedBuilding] = useState<string | null>(null);
 
     const canAfford = (building: Building) => {
         return (
@@ -82,8 +85,8 @@ const BuildingMenu = ({
     };
 
     const handleBuild = () => {
-        if (selectedBuilding && selectedCell) {
-            onBuild(selectedBuilding);
+        if (selectedBuildingId && selectedCell) {
+            onBuild(selectedBuildingId);
         }
     };
 
@@ -99,12 +102,12 @@ const BuildingMenu = ({
                 {buildings.map((building) => {
                     const affordable = canAfford(building);
                     const unlocked = isUnlocked(building);
-                    const selected = selectedBuilding === building.id;
+                    const selected = selectedBuildingId === building.id;
 
                     return (
                         <button
                             key={building.id}
-                            onClick={() => unlocked && setSelectedBuilding(building.id)}
+                            onClick={() => unlocked && onSelectBuilding(building.id)}
                             disabled={!unlocked}
                             className={`
                 w-full text-left p-4 rounded-lg border-2 transition-all duration-200 relative
@@ -179,7 +182,7 @@ const BuildingMenu = ({
                             Select an empty cell on the grid to build
                         </p>
                     </div>
-                ) : !selectedBuilding ? (
+                ) : !selectedBuildingId ? (
                     <div className="text-center p-4 bg-deepspace-900/30 rounded-lg border border-gray-700/30">
                         <p className="text-sm text-gray-400 font-rajdhani">
                             Select a building to construct
@@ -189,9 +192,9 @@ const BuildingMenu = ({
                     <button
                         onClick={handleBuild}
                         disabled={
-                            !selectedBuilding ||
+                            !selectedBuildingId ||
                             !selectedCell ||
-                            !canAfford(buildings.find((b) => b.id === selectedBuilding)!) ||
+                            !canAfford(buildings.find((b) => b.id === selectedBuildingId)!) ||
                             isBuilding
                         }
                         className="w-full px-6 py-3 bg-neon-cyan/20 border-2 border-neon-cyan rounded-lg font-orbitron font-bold text-neon-cyan hover:bg-neon-cyan/30 transition-all duration-300 hover:shadow-[0_0_30px_rgba(0,240,255,0.5)] disabled:opacity-50 disabled:cursor-not-allowed"
@@ -224,9 +227,9 @@ const BuildingMenu = ({
             </div>
 
             {/* Insufficient Resources Warning */}
-            {selectedBuilding &&
+            {selectedBuildingId &&
                 selectedCell &&
-                !canAfford(buildings.find((b) => b.id === selectedBuilding)!) && (
+                !canAfford(buildings.find((b) => b.id === selectedBuildingId)!) && (
                     <div className="mt-4 p-3 bg-red-500/10 border border-red-500/50 rounded-lg">
                         <p className="text-sm text-red-400 font-rajdhani font-semibold">
                             ⚠️ Insufficient Resources

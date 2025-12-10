@@ -37,7 +37,23 @@ const sectorSchema = new mongoose.Schema({
     defenseLevel: {
         type: Number,
         default: 0
-    }
+    },
+    maxDefense: {
+        type: Number,
+        default: 1000
+    },
+    currentDefense: {
+        type: Number,
+        default: 1000
+    },
+    structures: [{
+        type: String // Structure IDs from gameData
+    }],
+    events: [{
+        type: { type: String, enum: ['INVASION', 'STORM', 'ANOMALY'] },
+        strength: Number,
+        expiresAt: Date
+    }]
 });
 
 module.exports = mongoose.model('Sector', sectorSchema);

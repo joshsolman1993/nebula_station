@@ -1,4 +1,28 @@
 const { getBuildingById, TECHNOLOGIES, getArtifactById } = require('../config/gameData');
+const GlobalConfig = require('../models/GlobalConfig');
+
+/**
+ * Fetch global multipliers
+ */
+const getMultipliers = async () => {
+    const configs = await GlobalConfig.find({
+        key: { $in: ['RESOURCE_MULTIPLIER_METAL', 'RESOURCE_MULTIPLIER_CRYSTAL', 'RESOURCE_MULTIPLIER_ENERGY'] }
+    });
+
+    const multipliers = {
+        metal: 1.0,
+        crystal: 1.0,
+        energy: 1.0
+    };
+
+    configs.forEach(config => {
+        if (config.key === 'RESOURCE_MULTIPLIER_METAL') multipliers.metal = Number(config.value) || 1.0;
+        if (config.key === 'RESOURCE_MULTIPLIER_CRYSTAL') multipliers.crystal = Number(config.value) || 1.0;
+        if (config.key === 'RESOURCE_MULTIPLIER_ENERGY') multipliers.energy = Number(config.value) || 1.0;
+    });
+
+    return multipliers;
+};
 
 /**
  * Calculate and apply resource production based on elapsed time
@@ -8,7 +32,7 @@ const { getBuildingById, TECHNOLOGIES, getArtifactById } = require('../config/ga
  * @param {Object} station - Station document from MongoDB
  * @returns {Object} Updated production stats and resources
  */
-const calculateProduction = (user, station) => {
+const calculateProduction = async (user, station) => {
     const now = new Date();
     const lastUpdate = user.lastResourceUpdate || user.createdAt;
     const elapsedSeconds = Math.floor((now - lastUpdate) / 1000);
@@ -53,10 +77,7 @@ const calculateProduction = (user, station) => {
         }
 
         // Add base energy consumption for production buildings if not already handled
-        // (This logic might be redundant if buildings have negative energy production defined)
-        // Keeping it for backward compatibility or specific game rules
         if ((buildingData.production.metal > 0 || buildingData.production.crystal > 0) && buildingData.production.energy >= 0) {
-            // Each production building consumes 5 energy/h by default if not specified otherwise
             totalConsumption.energy += 5 / 3600;
         }
     });
@@ -68,14 +89,12 @@ const calculateProduction = (user, station) => {
     }
     // Apply Talent Bonuses
     if (user.talents) {
-        // Efficient Mining: +5% Metal & Crystal per level
         if (user.talents.get('efficient_mining')) {
             const level = user.talents.get('efficient_mining');
             const bonus = level * 0.05;
             totalProduction.metal *= (1 + bonus);
             totalProduction.crystal *= (1 + bonus);
         }
-        // Overclocking: +5% Energy per level
         if (user.talents.get('overclocking')) {
             const level = user.talents.get('overclocking');
             const bonus = level * 0.05;
@@ -96,6 +115,12 @@ const calculateProduction = (user, station) => {
             }
         });
     }
+
+    // Apply Global Configuration Multipliers
+    const multipliers = await getMultipliers();
+    totalProduction.metal *= multipliers.metal;
+    totalProduction.crystal *= multipliers.crystal;
+    totalProduction.energy *= multipliers.energy;
 
     // Calculate net energy balance
     const netEnergy = totalProduction.energy - totalConsumption.energy;
@@ -134,6 +159,7 @@ const calculateProduction = (user, station) => {
     console.log(`   Elapsed: ${elapsedSeconds}s`);
     console.log(`   Gained: Metal +${resourcesGained.metal}, Crystal +${resourcesGained.crystal}, Energy +${resourcesGained.energy}`);
     console.log(`   Efficiency: ${efficiency}%`);
+    console.log(`   Multipliers: M x${multipliers.metal}, C x${multipliers.crystal}, E x${multipliers.energy}`);
 
     return {
         updated: true,
@@ -156,7 +182,7 @@ const calculateProduction = (user, station) => {
  * Get current production rates without updating resources
  * Used for display purposes
  */
-const getProductionRates = (station, user) => {
+const getProductionRates = async (station, user) => {
     let totalProduction = {
         metal: 0,
         crystal: 0,
@@ -185,36 +211,46 @@ const getProductionRates = (station, user) => {
         }
     });
 
-    // Apply Talent Bonuses
-    if (user && user.talents) {
-        // Efficient Mining: +5% Metal & Crystal per level
-        if (user.talents.get('efficient_mining')) {
-            const level = user.talents.get('efficient_mining');
-            const bonus = level * 0.05;
-            totalProduction.metal *= (1 + bonus);
-            totalProduction.crystal *= (1 + bonus);
-        }
-        // Overclocking: +5% Energy per level
-        if (user.talents.get('overclocking')) {
-            const level = user.talents.get('overclocking');
-            const bonus = level * 0.05;
+    // Apply Research/Talent/Artifact Bonuses
+    if (user) {
+        if (user.completedResearch && user.completedResearch.includes(TECHNOLOGIES.ENERGY_GRID_OPTIMIZATION.id)) {
+            const bonus = TECHNOLOGIES.ENERGY_GRID_OPTIMIZATION.effect.value;
             totalProduction.energy *= (1 + bonus);
+        }
+
+        if (user.talents) {
+            if (user.talents.get('efficient_mining')) {
+                const level = user.talents.get('efficient_mining');
+                const bonus = level * 0.05;
+                totalProduction.metal *= (1 + bonus);
+                totalProduction.crystal *= (1 + bonus);
+            }
+            if (user.talents.get('overclocking')) {
+                const level = user.talents.get('overclocking');
+                const bonus = level * 0.05;
+                totalProduction.energy *= (1 + bonus);
+            }
+        }
+
+        if (user.equipment) {
+            Object.values(user.equipment).forEach(itemId => {
+                if (!itemId) return;
+                const artifact = getArtifactById(itemId);
+                if (artifact && artifact.effect.type === 'production_bonus') {
+                    const { resource, value } = artifact.effect;
+                    if (totalProduction[resource] !== undefined) {
+                        totalProduction[resource] *= (1 + value);
+                    }
+                }
+            });
         }
     }
 
-    // Apply Artifact Bonuses
-    if (user && user.equipment) {
-        Object.values(user.equipment).forEach(itemId => {
-            if (!itemId) return;
-            const artifact = getArtifactById(itemId);
-            if (artifact && artifact.effect.type === 'production_bonus') {
-                const { resource, value } = artifact.effect;
-                if (totalProduction[resource] !== undefined) {
-                    totalProduction[resource] *= (1 + value);
-                }
-            }
-        });
-    }
+    // Apply Global Configuration Multipliers
+    const multipliers = await getMultipliers();
+    totalProduction.metal *= multipliers.metal;
+    totalProduction.crystal *= multipliers.crystal;
+    totalProduction.energy *= multipliers.energy;
 
     const netEnergy = totalProduction.energy - totalConsumption.energy;
     const efficiency = netEnergy < 0 ? 50 : 100;

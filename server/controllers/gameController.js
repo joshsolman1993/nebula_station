@@ -1,5 +1,8 @@
+const Sector = require('../models/Sector');
 const User = require('../models/User');
 const Station = require('../models/Station');
+const GlobalConfig = require('../models/GlobalConfig');
+const GlobalQuest = require('../models/GlobalQuest');
 const { getBuildingById, getTechnologyById } = require('../config/gameData');
 const { calculateProduction, getProductionRates } = require('../utils/productionEngine');
 
@@ -19,7 +22,7 @@ exports.getStation = async (req, res) => {
         }
 
         // Calculate production and update resources
-        const productionStats = calculateProduction(user, station);
+        const productionStats = await calculateProduction(user, station);
 
         // Save updated user if resources were updated
         if (productionStats.updated) {
@@ -27,7 +30,7 @@ exports.getStation = async (req, res) => {
         }
 
         // Get current production rates
-        const rates = getProductionRates(station, user);
+        const rates = await getProductionRates(station, user);
 
         res.json({
             success: true,
@@ -60,6 +63,38 @@ exports.getStation = async (req, res) => {
             success: false,
             error: 'Failed to fetch station data',
         });
+    }
+};
+
+// @desc    Get Global Events (Quests & Invasions)
+// @route   GET /api/game/events
+exports.getGlobalEvents = async (req, res) => {
+    try {
+        // 1. Fetch Active Global Quest
+        const activeQuest = await GlobalQuest.findOne({ status: 'ACTIVE' });
+
+        // 2. Check for Invasions
+        // Count sectors with active INVASION events
+        const invasionSectorCount = await Sector.countDocuments({
+            'events': {
+                $elemMatch: {
+                    type: 'INVASION',
+                    expiresAt: { $gt: new Date() }
+                }
+            }
+        });
+
+        res.json({
+            success: true,
+            events: {
+                quest: activeQuest,
+                invasionActive: invasionSectorCount > 0,
+                invasionSectorCount
+            }
+        });
+    } catch (error) {
+        console.error('Get Global Events Error:', error);
+        res.status(500).json({ success: false, error: 'Server Error' });
     }
 };
 
@@ -109,7 +144,7 @@ exports.buildBuilding = async (req, res) => {
         }
 
         // Calculate production and update resources BEFORE building
-        const productionStats = calculateProduction(user, station);
+        const productionStats = await calculateProduction(user, station);
         if (productionStats.updated) {
             await user.save();
         }
@@ -173,7 +208,7 @@ exports.buildBuilding = async (req, res) => {
         console.log(`✅ Building placed: ${buildingData.name} at (${x}, ${y}) by ${user.username}`);
 
         // Get updated production rates
-        const rates = getProductionRates(station, user);
+        const rates = await getProductionRates(station, user);
 
         res.json({
             success: true,
@@ -289,7 +324,7 @@ exports.researchTechnology = async (req, res) => {
         console.log(`✅ Research completed: ${techData.name} by ${user.username}`);
 
         // Get updated production rates
-        const rates = getProductionRates(station, user);
+        const rates = await getProductionRates(station, user);
 
         res.json({
             success: true,
@@ -405,7 +440,7 @@ exports.equipItem = async (req, res) => {
         }
 
         // Recalculate production with new equipment
-        const rates = getProductionRates(station, user);
+        const rates = await getProductionRates(station, user);
 
         // Save user (and station if needed, though getProductionRates doesn't modify station)
         await user.save();
@@ -491,7 +526,7 @@ exports.unequipItem = async (req, res) => {
         user.equipment[dbSlot] = null;
 
         // Recalculate production
-        const rates = getProductionRates(station, user);
+        const rates = await getProductionRates(station, user);
 
         await user.save();
 

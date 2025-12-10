@@ -45,7 +45,7 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (!bgmRef.current) {
             bgmRef.current = new Howl({
                 src: ['/sounds/bgm.mp3'],
-                html5: true, // Force HTML5 Audio for large files
+                html5: false, // Use Web Audio API to avoid Audio pool limits
                 loop: true,
                 volume: volume * 0.5, // Background music slightly quieter
                 autoplay: false

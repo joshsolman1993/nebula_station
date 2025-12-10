@@ -7,8 +7,7 @@ interface EnergyStatusProps {
 
 const EnergyStatus = ({ production, consumption, netEnergy, efficiency }: EnergyStatusProps) => {
     const isDeficit = netEnergy < 0;
-    const productionPercent = consumption > 0 ? Math.min((production / (production + consumption)) * 100, 100) : 100;
-    const consumptionPercent = production > 0 ? Math.min((consumption / (production + consumption)) * 100, 100) : 0;
+
 
     return (
         <div className="bg-deepspace-950/40 backdrop-blur-md border-2 border-neon-amber/30 rounded-xl p-6">
@@ -20,22 +19,29 @@ const EnergyStatus = ({ production, consumption, netEnergy, efficiency }: Energy
             {/* Energy Balance Bar */}
             <div className="mb-4">
                 <div className="flex justify-between text-sm font-rajdhani mb-2">
-                    <span className="text-green-400">Production: {production.toFixed(1)}/h</span>
-                    <span className="text-red-400">Consumption: {consumption.toFixed(1)}/h</span>
+                    <span className="text-gray-400">Load: <span className={isDeficit ? 'text-red-400' : 'text-blue-300'}>{consumption.toFixed(0)}</span></span>
+                    <span className="text-gray-400">Capacity: <span className="text-green-400">{production.toFixed(0)}</span></span>
                 </div>
 
-                <div className="relative h-6 bg-deepspace-900 rounded-lg overflow-hidden border border-gray-700/50">
-                    {/* Production (Green) */}
-                    <div
-                        className="absolute left-0 top-0 h-full bg-gradient-to-r from-green-500 to-green-400 transition-all duration-500"
-                        style={{ width: `${productionPercent}%` }}
-                    ></div>
+                <div className="relative h-4 bg-deepspace-900 rounded-full overflow-hidden border border-gray-700/50">
+                    {/* Background tick marks for 25, 50, 75% */}
+                    <div className="absolute inset-0 flex justify-between px-[25%] opacity-20 pointer-events-none">
+                        <div className="w-px h-full bg-gray-400"></div>
+                        <div className="w-px h-full bg-gray-400"></div>
+                        <div className="w-px h-full bg-gray-400"></div>
+                    </div>
 
-                    {/* Consumption (Red) - from right */}
+                    {/* Usage Bar */}
                     <div
-                        className="absolute right-0 top-0 h-full bg-gradient-to-l from-red-500 to-red-400 transition-all duration-500"
-                        style={{ width: `${consumptionPercent}%` }}
-                    ></div>
+                        className={`absolute left-0 top-0 h-full transition-all duration-700 ease-out ${isDeficit ? 'bg-gradient-to-r from-red-600 to-red-500' :
+                            (consumption / production) > 0.8 ? 'bg-gradient-to-r from-yellow-600 to-yellow-400' :
+                                'bg-gradient-to-r from-blue-600 to-blue-400'
+                            }`}
+                        style={{ width: `${Math.min((consumption / (production || 1)) * 100, 100)}%` }}
+                    >
+                        {/* Animated shine effect */}
+                        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-shine" />
+                    </div>
                 </div>
             </div>
 
@@ -51,8 +57,8 @@ const EnergyStatus = ({ production, consumption, netEnergy, efficiency }: Energy
 
             {/* Efficiency Status */}
             <div className={`p-4 rounded-lg border-2 transition-all duration-300 ${isDeficit
-                    ? 'bg-red-500/10 border-red-500/50 animate-pulse'
-                    : 'bg-green-500/10 border-green-500/30'
+                ? 'bg-red-500/10 border-red-500/50 animate-pulse'
+                : 'bg-green-500/10 border-green-500/30'
                 }`}>
                 <div className="flex items-center gap-3">
                     <div className={`text-3xl ${isDeficit ? 'animate-bounce' : ''}`}>

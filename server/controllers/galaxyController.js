@@ -4,9 +4,21 @@ const User = require('../models/User');
 // Get Galaxy Map (Dynamic from DB)
 exports.getGalaxyMap = async (req, res) => {
     try {
-        const sectors = await Sector.find()
+        let sectors = await Sector.find()
             .populate('ownerAllianceId', 'name tag color')
             .lean(); // Faster query
+
+        // Self-healing: If no sectors found, trigger seed
+        if (sectors.length === 0) {
+            console.log('⚠️ Galaxy not found (getGalaxyMap). Triggering lazy seed...');
+            const seedGalaxy = require('../utils/seedGalaxy');
+            await seedGalaxy();
+
+            // Re-fetch
+            sectors = await Sector.find()
+                .populate('ownerAllianceId', 'name tag color')
+                .lean();
+        }
 
         // Transform for frontend if needed, but schema matches 
         // Frontend expects: { sectors: { [id]: { ... } } } dictionary
@@ -37,7 +49,7 @@ exports.getGalaxyMap = async (req, res) => {
 exports.travelToSector = async (req, res) => {
     try {
         const { targetSectorId } = req.body;
-        const userId = req.user.id; // From auth middleware
+        const userId = req.userId; // From auth middleware
 
         const user = await User.findById(userId);
         if (!user) {
@@ -69,8 +81,18 @@ exports.travelToSector = async (req, res) => {
             return res.status(400).json({ success: false, error: 'Insufficient energy for hyperspace jump (50 required)' });
         }
 
-        // Calculate Travel Time (30 seconds static for now)
-        const travelTimeMs = 30 * 1000;
+        // Calculate Travel Time (30 seconds base)
+        let travelTimeMs = 30 * 1000;
+
+        // Check for Sector Infrastructure (Warp Gate)
+        // If target sector has a Warp Gate AND belongs to the same alliance -> 50% travel time
+        if (targetSectorData.structures && targetSectorData.structures.includes('warp_gate')) {
+            if (user.alliance && targetSectorData.ownerAllianceId &&
+                user.alliance.toString() === targetSectorData.ownerAllianceId.toString()) {
+                travelTimeMs /= 2;
+            }
+        }
+
         const arrivalTime = new Date(Date.now() + travelTimeMs);
 
         // Deduct Energy & Update Status
@@ -98,7 +120,7 @@ exports.travelToSector = async (req, res) => {
 // Arrive at Sector (Complete Travel)
 exports.arriveAtSector = async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = req.userId;
         const user = await User.findById(userId);
 
         if (!user.travelStatus || !user.travelStatus.destination) {

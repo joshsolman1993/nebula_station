@@ -8,6 +8,8 @@ import gameService from '../services/gameService';
 import TutorialAdvisor from './TutorialAdvisor';
 import { Hammer, Gem, Zap, Coins } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useSound } from '../contexts/SoundContext';
+import EventBanner from './dashboard/EventBanner';
 
 interface StationBuilding {
     x: number;
@@ -23,14 +25,13 @@ interface ProductionRates {
     energy: number;
 }
 
-import { useSound } from '../contexts/SoundContext';
-
 const Dashboard = () => {
     const { user, updateUser } = useAuth();
     const { playSfx } = useSound();
     const [stationLayout, setStationLayout] = useState<StationBuilding[]>([]);
     const [stationSize, setStationSize] = useState(8);
     const [selectedCell, setSelectedCell] = useState<{ x: number; y: number } | null>(null);
+    const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null);
     const [isBuilding, setIsBuilding] = useState(false);
     const [completedResearch, setCompletedResearch] = useState<string[]>([]);
 
@@ -39,6 +40,7 @@ const Dashboard = () => {
     const [serverConsumption, setServerConsumption] = useState({ energy: 0 });
     const [netEnergy, setNetEnergy] = useState(0);
     const [efficiency, setEfficiency] = useState(100);
+    const [globalEvents, setGlobalEvents] = useState({ quest: null, invasionActive: false, invasionSectorCount: 0 });
 
     // Client-side estimated resources (for live counter effect)
     const [displayResources, setDisplayResources] = useState({
@@ -101,30 +103,29 @@ const Dashboard = () => {
 
                 lastUpdateRef.current = Date.now();
             }
+
+            // Fetch Global Events
+            const eventsResponse = await gameService.getGlobalEvents();
+            if (eventsResponse.success) {
+                setGlobalEvents(eventsResponse.events);
+            }
+
         } catch (err: any) {
             console.error('Failed to load station:', err);
             toast.error('Failed to load station data');
         }
     };
 
-    const handleCellClick = (x: number, y: number) => {
-        const isOccupied = stationLayout.some((building) => building.x === x && building.y === y);
+    const handleBuild = async (buildingId: string, location?: { x: number; y: number }) => {
+        const targetX = location?.x ?? selectedCell?.x;
+        const targetY = location?.y ?? selectedCell?.y;
 
-        if (isOccupied) {
-            toast.error('This position is already occupied');
-            return;
-        }
-
-        setSelectedCell({ x, y });
-    };
-
-    const handleBuild = async (buildingId: string) => {
-        if (!selectedCell) return;
+        if (targetX === undefined || targetY === undefined) return;
 
         setIsBuilding(true);
 
         try {
-            const response = await gameService.buildBuilding(buildingId, selectedCell.x, selectedCell.y);
+            const response = await gameService.buildBuilding(buildingId, targetX, targetY);
 
             if (response.success) {
                 // Update station layout
@@ -159,13 +160,29 @@ const Dashboard = () => {
         }
     };
 
+    const handleCellClick = (x: number, y: number) => {
+        const isOccupied = stationLayout.some((building) => building.x === x && building.y === y);
+
+        if (isOccupied) {
+            toast.error('This position is already occupied');
+            return;
+        }
+
+        if (selectedBuildingId) {
+            // Instant build mode
+            handleBuild(selectedBuildingId, { x, y });
+        } else {
+            // Select cell mode
+            setSelectedCell({ x, y });
+        }
+    };
+
     if (!user) return null;
 
     return (
         <div className="py-8">
             {/* Main Content */}
             <main className="max-w-7xl mx-auto px-4">
-                {/* Page Title */}
                 {/* Header Compact */}
                 <div className="mb-6 flex justify-between items-center">
                     <div>
@@ -174,8 +191,10 @@ const Dashboard = () => {
                     </div>
                 </div>
 
+                <EventBanner events={globalEvents} />
+
                 {/* Resources Bar with Production Rates - Sticky */}
-                <div className="sticky top-20 z-40 mb-6 bg-deepspace-950/80 backdrop-blur-xl border border-neon-cyan/20 rounded-xl p-4 shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
+                <div className="sticky top-20 z-40 mb-6 bg-deepspace-950/80 backdrop-blur-xl border border-neon-cyan/20 rounded-xl p-4 shadow-[0_4px_30px_rgba(0,0,0,0.3)] box-glow">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="flex items-center gap-3">
                             <Hammer className="w-6 h-6 text-neon-cyan" />
@@ -186,10 +205,10 @@ const Dashboard = () => {
                                 </div>
                                 {serverProduction.metal > 0 && (
                                     <div
-                                        className={`font-rajdhani text-xs ${efficiency < 100 ? 'text-red-400' : 'text-green-400'
+                                        className={`font-rajdhani text-sm font-semibold flex items-center gap-1 ${efficiency < 100 ? 'text-red-400' : 'text-green-400'
                                             }`}
                                     >
-                                        +{serverProduction.metal.toFixed(1)}/h
+                                        <span className="text-xs">▲</span> {serverProduction.metal.toFixed(1)}/h
                                     </div>
                                 )}
                             </div>
@@ -203,10 +222,10 @@ const Dashboard = () => {
                                 </div>
                                 {serverProduction.crystal > 0 && (
                                     <div
-                                        className={`font-rajdhani text-xs ${efficiency < 100 ? 'text-red-400' : 'text-green-400'
+                                        className={`font-rajdhani text-sm font-semibold flex items-center gap-1 ${efficiency < 100 ? 'text-red-400' : 'text-green-400'
                                             }`}
                                     >
-                                        +{serverProduction.crystal.toFixed(1)}/h
+                                        <span className="text-xs">▲</span> {serverProduction.crystal.toFixed(1)}/h
                                     </div>
                                 )}
                             </div>
@@ -265,10 +284,12 @@ const Dashboard = () => {
                             buildings={BUILDINGS}
                             userResources={displayResources}
                             userCredits={displayCredits}
-                            onBuild={handleBuild}
+                            onBuild={(id) => handleBuild(id)}
                             selectedCell={selectedCell}
                             isBuilding={isBuilding}
                             completedResearch={completedResearch}
+                            selectedBuildingId={selectedBuildingId}
+                            onSelectBuilding={setSelectedBuildingId}
                         />
                     </div>
                 </div>

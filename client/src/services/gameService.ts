@@ -231,6 +231,42 @@ class GameService {
             throw error;
         }
     }
+
+    async getAllianceLeaderboard() {
+        try {
+            const token = this.getToken();
+            const response = await fetch(`${API_URL}/game/leaderboard/alliance`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            const jsonData = await response.json();
+            return jsonData;
+        } catch (error: any) {
+            console.error('Game API Alliance Leaderboard Error:', error);
+            throw error;
+        }
+    }
+
+    async getGlobalEvents() {
+        try {
+            const token = this.getToken();
+            const response = await fetch(`${API_URL}/game/events`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+            return await response.json();
+        } catch (error) {
+            console.error('Get Global Events Error:', error);
+            return { success: false };
+        }
+    }
 }
 
 export default new GameService();

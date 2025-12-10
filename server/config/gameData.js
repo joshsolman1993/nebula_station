@@ -413,6 +413,19 @@ const ENEMIES = [
         },
         difficulty: 'Hard',
         icon: '🐉'
+    },
+    {
+        id: 'sector_defense_platform',
+        name: 'Sector Defense Platform',
+        description: 'Automated defense system protecting the sector.',
+        attack: 50,
+        hp: 1000,
+        reward: {
+            credits: { min: 200, max: 500 },
+            metal: { min: 500, max: 1000 }
+        },
+        difficulty: 'Boss',
+        icon: '🏯'
     }
 ];
 
@@ -459,6 +472,34 @@ const TUTORIAL_QUESTS = [
     }
 ];
 
+const SECTOR_STRUCTURES = [
+    {
+        id: 'warp_gate',
+        name: 'Warp Gate',
+        description: 'Reduces travel time to this sector by 50% for alliance members.',
+        cost: { metal: 5000, credits: 2000 },
+        maxCount: 1
+    },
+    {
+        id: 'defense_grid',
+        name: 'Defense Grid',
+        description: 'Increases sector maximum defense by 500.',
+        cost: { metal: 8000, crystal: 2000 },
+        maxCount: 1
+    },
+    {
+        id: 'trade_hub',
+        name: 'Trade Hub',
+        description: 'Increases tax revenue from this sector by 20%.',
+        cost: { credits: 5000 },
+        maxCount: 1
+    }
+];
+
+const getSectorStructureById = (id) => SECTOR_STRUCTURES.find(s => s.id === id);
+const getAllSectorStructures = () => SECTOR_STRUCTURES;
+
+
 module.exports = {
     BUILDINGS,
     SHIPS,
@@ -479,6 +520,9 @@ module.exports = {
     getEnemyById: (id) => ENEMIES.find(e => e.id === id),
     TUTORIAL_QUESTS,
     getQuestById: (id) => TUTORIAL_QUESTS.find(q => q.id === id),
+    SECTOR_STRUCTURES,
+    getSectorStructureById,
+    getAllSectorStructures,
     TALENTS: {
         INDUSTRIALIST: [
             {

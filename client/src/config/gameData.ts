@@ -379,6 +379,39 @@ export const TUTORIAL_QUESTS: Quest[] = [
     }
 ];
 
+export const SECTOR_STRUCTURES = [
+    {
+        id: 'warp_gate',
+        name: 'Warp Gate',
+        description: 'Reduces travel time to this sector by 50% for alliance members.',
+        cost: { metal: 5000, credits: 2000 },
+        maxCount: 1,
+        icon: '🌀',
+        type: 'utility'
+    },
+    {
+        id: 'defense_grid',
+        name: 'Defense Grid',
+        description: 'Increases sector maximum defense by 500.',
+        cost: { metal: 8000, crystal: 2000 },
+        effect: { type: 'defense_boost', value: 500 },
+        maxCount: 1,
+        icon: '🛡️',
+        type: 'defense'
+    },
+    {
+        id: 'trade_hub',
+        name: 'Trade Hub',
+        description: 'Increases tax revenue from this sector by 20%.',
+        cost: { credits: 5000 },
+        effect: { type: 'tax_bonus', value: 0.20 },
+        maxCount: 1,
+        icon: '💰',
+        type: 'economy'
+    }
+];
+
+
 export interface Mission {
     id: string;
     name: string;

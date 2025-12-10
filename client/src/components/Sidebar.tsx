@@ -57,13 +57,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
             )}
 
             {/* Sidebar Container */}
-            <aside className={`
-                fixed lg:sticky top-0 left-0 z-50 h-screen
-                w-64 bg-slate-900/95 border-r border-slate-800
-                transition-transform duration-300 ease-in-out
-                ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-                flex flex-col
-            `}>
+            <aside
+                className={`
+                    fixed lg:sticky top-0 left-0 z-50 h-screen
+                    w-64 bg-deepspace-950/90 backdrop-blur-xl border-r border-neon-cyan/20
+                    transition-transform duration-300 ease-in-out
+                    ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+                    flex flex-col
+                `}
+            >
                 {/* Logo Area */}
                 <div className="h-16 flex items-center px-6 border-b border-slate-800 bg-slate-950/50">
                     <Rocket className="w-8 h-8 text-blue-500 mr-3" />

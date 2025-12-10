@@ -45,6 +45,24 @@ const socketHandler = (io) => {
             const { sender, text, role, type, allianceId, allianceTag } = messageData;
 
             try {
+                // Moderation Check: Fetch user to check mute status
+                const user = await require('../models/User').findOne({ username: sender });
+                if (user) {
+                    if (user.isBanned) return; // Banned users cannot speak
+                    if (user.isMuted) {
+                        if (user.muteExpiresAt && new Date() > user.muteExpiresAt) {
+                            // Auto-unmute
+                            user.isMuted = false;
+                            user.muteExpiresAt = null;
+                            await user.save();
+                        } else {
+                            // Reject message
+                            socket.emit('error_message', `You are muted until ${user.muteExpiresAt ? new Date(user.muteExpiresAt).toLocaleString() : 'forever'}`);
+                            return;
+                        }
+                    }
+                }
+
                 // If alliance chat
                 if (type === 'alliance' && allianceId) {
                     const room = `alliance_${allianceId}`;

@@ -7,7 +7,10 @@ const {
     leaveAlliance,
     getMyAlliance,
     donateResources,
-    claimSector
+    claimSector,
+    siegeSector,
+    reinforceSector,
+    buildSectorStructure
 } = require('../controllers/allianceController');
 const { protect } = require('../middleware/auth');
 
@@ -20,5 +23,8 @@ router.post('/leave', leaveAlliance);
 router.get('/my-alliance', getMyAlliance);
 router.post('/donate', donateResources);
 router.post('/claim-sector', claimSector);
+router.post('/siege-sector', siegeSector);
+router.post('/reinforce-sector', reinforceSector);
+router.post('/build-sector', buildSectorStructure);
 
 module.exports = router;
